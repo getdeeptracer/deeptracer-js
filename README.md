@@ -1,6 +1,25 @@
-# DeepTracer JavaScript SDK
+<p align="center">
+  <a href="https://deeptracer.dev">
+    <img src="https://deeptracer.dev/logo.svg" alt="DeepTracer" width="120" />
+  </a>
+</p>
 
-Multi-package observability SDK for [DeepTracer](https://github.com/getdeeptracer/deeptracer) — structured logging, error tracking, distributed tracing, and LLM usage monitoring.
+<h1 align="center">DeepTracer JavaScript SDK</h1>
+
+<p align="center">
+  AI-first observability for vibe coders — logs, errors, traces, and LLM usage tracking.
+  <br />
+  <a href="https://deeptracer.dev"><strong>deeptracer.dev</strong></a> · <a href="https://deeptracer.dev/docs">Docs</a> · <a href="https://github.com/getdeeptracer/deeptracer-js/issues">Issues</a>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@deeptracer/node"><img src="https://img.shields.io/npm/v/@deeptracer/node?label=%40deeptracer%2Fnode&color=blue" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@deeptracer/ai"><img src="https://img.shields.io/npm/v/@deeptracer/ai?label=%40deeptracer%2Fai&color=blue" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@deeptracer/core"><img src="https://img.shields.io/npm/v/@deeptracer/core?label=%40deeptracer%2Fcore&color=blue" alt="npm" /></a>
+  <a href="/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
+</p>
+
+---
 
 Built for **vibe coders and AI-assisted development** — sensible defaults, automatic error capture, and one-liner integrations.
 
@@ -84,6 +103,14 @@ npm run build
 # Clean all dist folders
 npm run clean
 ```
+
+## Links
+
+- [deeptracer.dev](https://deeptracer.dev) — Homepage
+- [Docs](https://deeptracer.dev/docs) — Documentation
+- [Dashboard](https://deeptracer.dev/dashboard) — Sign in
+- [GitHub](https://github.com/getdeeptracer/deeptracer-js) — Source code
+- [Issues](https://github.com/getdeeptracer/deeptracer-js/issues) — Bug reports & feature requests
 
 ## License
 
