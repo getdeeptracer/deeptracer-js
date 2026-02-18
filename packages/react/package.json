@@ -1,0 +1,35 @@
+{
+  "name": "@deeptracer/react",
+  "version": "0.2.0",
+  "description": "DeepTracer React integration — error boundaries and hooks (coming soon)",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "sideEffects": false,
+  "keywords": ["deeptracer", "react", "error-boundary"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeword-tech/deeptracer-js.git",
+    "directory": "packages/react"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@deeptracer/browser": "0.2.0"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  }
+}

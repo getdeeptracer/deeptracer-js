@@ -1,0 +1,36 @@
+{
+  "name": "@deeptracer/nextjs",
+  "version": "0.2.0",
+  "description": "DeepTracer Next.js integration — server and client instrumentation (coming soon)",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "sideEffects": false,
+  "keywords": ["deeptracer", "nextjs", "observability"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeword-tech/deeptracer-js.git",
+    "directory": "packages/nextjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@deeptracer/node": "0.2.0",
+    "@deeptracer/react": "0.2.0"
+  },
+  "peerDependencies": {
+    "next": ">=14"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  }
+}

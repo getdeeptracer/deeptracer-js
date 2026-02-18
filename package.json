@@ -1,0 +1,26 @@
+{
+  "name": "deeptracer-js",
+  "private": true,
+  "version": "0.2.0",
+  "description": "DeepTracer JavaScript SDK — multi-package observability toolkit",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w packages/core && npm run build -w packages/node -w packages/ai -w packages/browser && npm run build -w packages/react && npm run build -w packages/nextjs",
+    "clean": "rm -rf packages/*/dist",
+    "typecheck": "tsc --build packages/*/tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "tsup": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeword-tech/deeptracer-js.git"
+  },
+  "license": "MIT"
+}

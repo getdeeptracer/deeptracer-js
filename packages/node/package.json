@@ -1,0 +1,35 @@
+{
+  "name": "@deeptracer/node",
+  "version": "0.2.0",
+  "description": "DeepTracer SDK for Node.js and Bun — global error capture, console capture, Express & Hono middleware",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "sideEffects": false,
+  "keywords": ["logging", "observability", "tracing", "deeptracer", "nodejs", "bun", "hono", "express"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeword-tech/deeptracer-js.git",
+    "directory": "packages/node"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@deeptracer/core": "0.2.0"
+  },
+  "devDependencies": {
+    "@types/node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  }
+}

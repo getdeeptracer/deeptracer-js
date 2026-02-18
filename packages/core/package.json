@@ -1,0 +1,34 @@
+{
+  "name": "@deeptracer/core",
+  "version": "0.2.0",
+  "description": "Core SDK for DeepTracer — Logger class, types, transport, batcher, tracing",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./internal": {
+      "types": "./dist/internal.d.ts",
+      "import": "./dist/internal.js",
+      "require": "./dist/internal.cjs"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "sideEffects": false,
+  "keywords": ["logging", "observability", "tracing", "deeptracer"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeword-tech/deeptracer-js.git",
+    "directory": "packages/core"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@deeptracer/browser",
+  "version": "0.2.0",
+  "description": "DeepTracer SDK for browsers — window error handlers, fetch interceptor",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "sideEffects": false,
+  "keywords": ["deeptracer", "browser", "observability"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeword-tech/deeptracer-js.git",
+    "directory": "packages/browser"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@deeptracer/core": "0.2.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  }
+}
