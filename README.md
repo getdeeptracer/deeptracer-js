@@ -1,6 +1,6 @@
 # DeepTracer JavaScript SDK
 
-Multi-package observability SDK for [DeepTracer](https://github.com/codeword-tech/deeptracer) — structured logging, error tracking, distributed tracing, and LLM usage monitoring.
+Multi-package observability SDK for [DeepTracer](https://github.com/getdeeptracer/deeptracer) — structured logging, error tracking, distributed tracing, and LLM usage monitoring.
 
 Built for **vibe coders and AI-assisted development** — sensible defaults, automatic error capture, and one-liner integrations.
 

@@ -18,7 +18,7 @@
   "keywords": ["deeptracer", "ai", "llm", "openai", "anthropic", "vercel-ai"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/codeword-tech/deeptracer-js.git",
+    "url": "https://github.com/getdeeptracer/deeptracer-js.git",
     "directory": "packages/ai"
   },
   "license": "MIT",

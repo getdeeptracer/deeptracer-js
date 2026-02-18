@@ -1,6 +1,6 @@
 # @deeptracer/core
 
-Zero-dependency shared core for the [DeepTracer JavaScript SDK](https://github.com/codeword-tech/deeptracer-js). Provides the `Logger` class with structured logging, error tracking, distributed tracing, and LLM usage monitoring.
+Zero-dependency shared core for the [DeepTracer JavaScript SDK](https://github.com/getdeeptracer/deeptracer-js). Provides the `Logger` class with structured logging, error tracking, distributed tracing, and LLM usage monitoring.
 
 This package is the foundation that all other `@deeptracer/*` packages build on. **Most users should install `@deeptracer/node` instead**, which re-exports everything from core and adds Node.js/Bun-specific features. Use `@deeptracer/core` directly only if you are building a custom integration or working in a runtime that is not Node.js, Bun, or a browser.
 
@@ -359,7 +359,7 @@ logger.llmUsage({
 })
 ```
 
-> **Tip:** For automatic LLM tracking, use [`@deeptracer/ai`](https://github.com/codeword-tech/deeptracer-js/tree/main/packages/ai) which wraps Vercel AI SDK, OpenAI, and Anthropic clients.
+> **Tip:** For automatic LLM tracking, use [`@deeptracer/ai`](https://github.com/getdeeptracer/deeptracer-js/tree/main/packages/ai) which wraps Vercel AI SDK, OpenAI, and Anthropic clients.
 
 ---
 
@@ -595,16 +595,16 @@ If a request fails, a warning is logged to the console. The SDK does not retry f
 
 ## Monorepo
 
-This package is part of the [DeepTracer JavaScript SDK](https://github.com/codeword-tech/deeptracer-js) monorepo:
+This package is part of the [DeepTracer JavaScript SDK](https://github.com/getdeeptracer/deeptracer-js) monorepo:
 
 | Package | Description |
 |---------|-------------|
 | **`@deeptracer/core`** | Zero-dependency shared core (this package) |
-| [`@deeptracer/node`](https://github.com/codeword-tech/deeptracer-js/tree/main/packages/node) | Node.js/Bun SDK -- global errors, console capture, Hono & Express middleware |
-| [`@deeptracer/ai`](https://github.com/codeword-tech/deeptracer-js/tree/main/packages/ai) | AI SDK wrappers -- Vercel AI, OpenAI, Anthropic |
-| [`@deeptracer/browser`](https://github.com/codeword-tech/deeptracer-js/tree/main/packages/browser) | Browser SDK (preview) |
-| [`@deeptracer/react`](https://github.com/codeword-tech/deeptracer-js/tree/main/packages/react) | React integration (coming soon) |
-| [`@deeptracer/nextjs`](https://github.com/codeword-tech/deeptracer-js/tree/main/packages/nextjs) | Next.js integration (coming soon) |
+| [`@deeptracer/node`](https://github.com/getdeeptracer/deeptracer-js/tree/main/packages/node) | Node.js/Bun SDK -- global errors, console capture, Hono & Express middleware |
+| [`@deeptracer/ai`](https://github.com/getdeeptracer/deeptracer-js/tree/main/packages/ai) | AI SDK wrappers -- Vercel AI, OpenAI, Anthropic |
+| [`@deeptracer/browser`](https://github.com/getdeeptracer/deeptracer-js/tree/main/packages/browser) | Browser SDK (preview) |
+| [`@deeptracer/react`](https://github.com/getdeeptracer/deeptracer-js/tree/main/packages/react) | React integration (coming soon) |
+| [`@deeptracer/nextjs`](https://github.com/getdeeptracer/deeptracer-js/tree/main/packages/nextjs) | Next.js integration (coming soon) |
 
 ## License
 

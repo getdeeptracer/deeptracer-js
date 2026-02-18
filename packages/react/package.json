@@ -18,7 +18,7 @@
   "keywords": ["deeptracer", "react", "error-boundary"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/codeword-tech/deeptracer-js.git",
+    "url": "https://github.com/getdeeptracer/deeptracer-js.git",
     "directory": "packages/react"
   },
   "license": "MIT",

@@ -23,7 +23,7 @@
   "keywords": ["logging", "observability", "tracing", "deeptracer"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/codeword-tech/deeptracer-js.git",
+    "url": "https://github.com/getdeeptracer/deeptracer-js.git",
     "directory": "packages/core"
   },
   "license": "MIT",

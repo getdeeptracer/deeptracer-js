@@ -1,6 +1,6 @@
 # @deeptracer/ai
 
-Automatic LLM usage tracking wrappers for the [DeepTracer JavaScript SDK](https://github.com/codeword-tech/deeptracer-js). Wraps **Vercel AI SDK**, **OpenAI**, and **Anthropic** clients to automatically capture model, token counts, latency, and provider for every LLM call -- both streaming and non-streaming.
+Automatic LLM usage tracking wrappers for the [DeepTracer JavaScript SDK](https://github.com/getdeeptracer/deeptracer-js). Wraps **Vercel AI SDK**, **OpenAI**, and **Anthropic** clients to automatically capture model, token counts, latency, and provider for every LLM call -- both streaming and non-streaming.
 
 No code changes required in your AI calls. Wrap once, track everything.
 
@@ -472,16 +472,16 @@ For `wrapOpenAI` and `wrapAnthropic`, the provider is hardcoded to `"openai"` an
 
 ## Monorepo
 
-This package is part of the [DeepTracer JavaScript SDK](https://github.com/codeword-tech/deeptracer-js) monorepo:
+This package is part of the [DeepTracer JavaScript SDK](https://github.com/getdeeptracer/deeptracer-js) monorepo:
 
 | Package | Description |
 |---------|-------------|
-| [`@deeptracer/core`](https://github.com/codeword-tech/deeptracer-js/tree/main/packages/core) | Zero-dependency shared core |
-| [`@deeptracer/node`](https://github.com/codeword-tech/deeptracer-js/tree/main/packages/node) | Node.js/Bun SDK -- global errors, console capture, Hono & Express middleware |
+| [`@deeptracer/core`](https://github.com/getdeeptracer/deeptracer-js/tree/main/packages/core) | Zero-dependency shared core |
+| [`@deeptracer/node`](https://github.com/getdeeptracer/deeptracer-js/tree/main/packages/node) | Node.js/Bun SDK -- global errors, console capture, Hono & Express middleware |
 | **`@deeptracer/ai`** | AI SDK wrappers (this package) |
-| [`@deeptracer/browser`](https://github.com/codeword-tech/deeptracer-js/tree/main/packages/browser) | Browser SDK (preview) |
-| [`@deeptracer/react`](https://github.com/codeword-tech/deeptracer-js/tree/main/packages/react) | React integration (coming soon) |
-| [`@deeptracer/nextjs`](https://github.com/codeword-tech/deeptracer-js/tree/main/packages/nextjs) | Next.js integration (coming soon) |
+| [`@deeptracer/browser`](https://github.com/getdeeptracer/deeptracer-js/tree/main/packages/browser) | Browser SDK (preview) |
+| [`@deeptracer/react`](https://github.com/getdeeptracer/deeptracer-js/tree/main/packages/react) | React integration (coming soon) |
+| [`@deeptracer/nextjs`](https://github.com/getdeeptracer/deeptracer-js/tree/main/packages/nextjs) | Next.js integration (coming soon) |
 
 ## License
 
