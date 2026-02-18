@@ -1,6 +1,6 @@
 {
   "name": "@deeptracer/nextjs",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "DeepTracer Next.js integration — automatic server-side error capture with one-file setup",
   "type": "module",
   "main": "dist/index.cjs",
@@ -28,8 +28,8 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@deeptracer/node": "0.3.0",
-    "@deeptracer/react": "0.3.0"
+    "@deeptracer/node": "0.3.1",
+    "@deeptracer/react": "0.3.1"
   },
   "peerDependencies": {
     "next": ">=14",

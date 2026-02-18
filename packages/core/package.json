@@ -1,6 +1,6 @@
 {
   "name": "@deeptracer/core",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Core SDK for DeepTracer — Logger class, types, transport, batcher, tracing",
   "type": "module",
   "main": "dist/index.cjs",

@@ -1,6 +1,6 @@
 {
   "name": "@deeptracer/react",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "DeepTracer React integration — provider, error boundary, and hooks for automatic error capture",
   "type": "module",
   "main": "dist/index.cjs",
@@ -32,7 +32,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@deeptracer/browser": "0.3.0"
+    "@deeptracer/browser": "0.3.1"
   },
   "peerDependencies": {
     "react": ">=18",
