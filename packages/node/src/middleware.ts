@@ -95,6 +95,7 @@ export function expressMiddleware(
         request_id: requestId || (vercelId ? vercelId.split("::").pop() : undefined),
         vercel_id: vercelId,
       },
+      (logger as any).state,
     )
 
     const span = reqLogger.startInactiveSpan(opName)

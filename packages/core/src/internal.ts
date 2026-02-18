@@ -2,3 +2,4 @@
 // NOT part of the public API — may change without notice
 export { _originalConsole, Logger } from "./logger"
 export type { LoggerConfig, MiddlewareOptions } from "./types"
+export type { LoggerState } from "./state"

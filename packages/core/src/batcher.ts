@@ -33,8 +33,9 @@ export class Batcher {
     this.timer = setInterval(() => this.flush(), this.flushIntervalMs)
   }
 
-  destroy() {
+  async destroy(): Promise<void> {
     if (this.timer) clearInterval(this.timer)
+    this.timer = null
     this.flush()
   }
 }

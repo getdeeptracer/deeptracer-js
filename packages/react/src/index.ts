@@ -1,7 +1,11 @@
-// Re-export everything from browser SDK
+// Re-export everything from browser SDK so users only need @deeptracer/react
 export * from "@deeptracer/browser"
 
-// TODO: React-specific features
-// - DeepTracerErrorBoundary component
-// - useDeepTracer() hook
-// - useLogger() hook
+// React-specific features
+export { DeepTracerProvider, type DeepTracerProviderProps } from "./context"
+export {
+  DeepTracerErrorPage,
+  DeepTracerErrorBoundary,
+  useDeepTracerErrorReporter,
+} from "./error-boundary"
+export { useLogger } from "./hooks"

@@ -29,6 +29,28 @@ export interface LoggerConfig {
   flushIntervalMs?: number
   /** Enable console output for all log calls (useful for local development) */
   debug?: boolean
+  /** Maximum breadcrumbs to retain for error reports. Default: 20 */
+  maxBreadcrumbs?: number
+  /**
+   * Hook to inspect, modify, or drop events before they are sent to DeepTracer.
+   * Return the event (possibly modified) to send it, or return `null` to drop it.
+   *
+   * @example
+   * ```ts
+   * beforeSend: (event) => {
+   *   // Scrub PII
+   *   if (event.type === "error" && event.data.context?.password) {
+   *     delete event.data.context.password
+   *   }
+   *   // Drop health-check logs
+   *   if (event.type === "log" && event.data.message.includes("/health")) {
+   *     return null
+   *   }
+   *   return event
+   * }
+   * ```
+   */
+  beforeSend?: (event: BeforeSendEvent) => BeforeSendEvent | null
 }
 
 /** Log severity level */
@@ -51,6 +73,21 @@ export interface LogEntry {
 }
 
 /**
+ * A breadcrumb entry — a trail of events leading up to an error.
+ * Automatically captured by the SDK; also settable manually via `addBreadcrumb()`.
+ *
+ * Dashboard icon mapping: `http`, `db`, `function`, `user`, `error` → specific icons.
+ */
+export interface Breadcrumb {
+  /** Activity category (http, db, function, user, error, log, or custom) */
+  type: string
+  /** Human-readable description (e.g., "POST /api/cart", "User loaded dashboard") */
+  message: string
+  /** ISO 8601 timestamp */
+  timestamp: string
+}
+
+/**
  * Error report sent to DeepTracer for tracking and alerting.
  */
 export interface ErrorReport {
@@ -60,11 +97,7 @@ export interface ErrorReport {
   context?: Record<string, unknown>
   trace_id?: string
   user_id?: string
-  breadcrumbs?: Array<{
-    type: string
-    message: string
-    timestamp: string
-  }>
+  breadcrumbs?: Breadcrumb[]
 }
 
 /**
@@ -133,3 +166,33 @@ export interface MiddlewareOptions {
   /** Paths to exclude from tracing (e.g., ["/health", "/ready"]) */
   ignorePaths?: string[]
 }
+
+/**
+ * User context attached to all outgoing events.
+ * Set via `logger.setUser()`, cleared via `logger.clearUser()`.
+ *
+ * @example
+ * ```ts
+ * logger.setUser({ id: "u_123", email: "user@example.com" })
+ * ```
+ */
+export interface User {
+  /** Unique user identifier (required) */
+  id: string
+  /** User's email address */
+  email?: string
+  /** Display name or username */
+  username?: string
+  /** Any additional user attributes */
+  [key: string]: unknown
+}
+
+/**
+ * Discriminated union for the `beforeSend` hook. Wraps every event type
+ * so the hook can inspect and modify events before they are sent.
+ */
+export type BeforeSendEvent =
+  | { type: "log"; data: LogEntry }
+  | { type: "error"; data: ErrorReport }
+  | { type: "trace"; data: SpanData }
+  | { type: "llm"; data: LLMUsageReport }

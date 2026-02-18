@@ -7,9 +7,13 @@ import type {
   Span,
   InactiveSpan,
   SpanData,
+  User,
+  Breadcrumb,
+  BeforeSendEvent,
 } from "./types"
 import { Batcher } from "./batcher"
 import { Transport } from "./transport"
+import { type LoggerState, createLoggerState, addBreadcrumb as addBreadcrumbToState } from "./state"
 
 /** Generate a random 16-character hex ID for trace/span IDs */
 function generateId(): string {
@@ -48,6 +52,8 @@ export const _originalConsole = {
  *   apiKey: "dt_live_xxx",
  * })
  *
+ * logger.setUser({ id: "u_123", email: "user@example.com" })
+ * logger.setTags({ release: "1.2.3" })
  * logger.info("Server started", { port: 3000 })
  * ```
  */
@@ -56,6 +62,7 @@ export class Logger {
   private transport: Transport
   protected contextName?: string
   protected config: LoggerConfig
+  protected state: LoggerState
   protected requestMeta?: {
     trace_id?: string
     span_id?: string
@@ -67,10 +74,12 @@ export class Logger {
     config: LoggerConfig,
     contextName?: string,
     requestMeta?: { trace_id?: string; span_id?: string; request_id?: string; vercel_id?: string },
+    state?: LoggerState,
   ) {
     this.config = config
     this.contextName = contextName
     this.requestMeta = requestMeta
+    this.state = state ?? createLoggerState(config.maxBreadcrumbs ?? 20)
     this.transport = new Transport(config)
     this.batcher = new Batcher(
       { batchSize: config.batchSize, flushIntervalMs: config.flushIntervalMs },
@@ -79,6 +88,127 @@ export class Logger {
       },
     )
   }
+
+  // ---------------------------------------------------------------------------
+  // User context
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Set the current user context. Attached to all subsequent logs, errors, spans, and LLM reports.
+   * Shared across all child loggers (withContext, forRequest).
+   *
+   * @example
+   * ```ts
+   * logger.setUser({ id: "u_123", email: "user@example.com", plan: "pro" })
+   * ```
+   */
+  setUser(user: User): void {
+    this.state.user = user
+  }
+
+  /** Clear the current user context. */
+  clearUser(): void {
+    this.state.user = null
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tags & Context
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Set global tags (flat string key-values). Merged into all events' metadata as `_tags`.
+   * Tags are indexed and searchable on the dashboard.
+   *
+   * @example
+   * ```ts
+   * logger.setTags({ release: "1.2.3", region: "us-east-1" })
+   * ```
+   */
+  setTags(tags: Record<string, string>): void {
+    Object.assign(this.state.tags, tags)
+  }
+
+  /** Clear all global tags. */
+  clearTags(): void {
+    this.state.tags = {}
+  }
+
+  /**
+   * Set a named context block. Merged into metadata as `_contexts.{name}`.
+   * Contexts are structured objects attached for reference (not necessarily indexed).
+   *
+   * @example
+   * ```ts
+   * logger.setContext("server", { hostname: "web-3", memory: "4gb" })
+   * ```
+   */
+  setContext(name: string, data: Record<string, unknown>): void {
+    this.state.contexts[name] = data
+  }
+
+  /** Clear a specific context block, or all contexts if no name is given. */
+  clearContext(name?: string): void {
+    if (name) {
+      delete this.state.contexts[name]
+    } else {
+      this.state.contexts = {}
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Breadcrumbs
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Manually add a breadcrumb to the trail.
+   * Breadcrumbs are also recorded automatically for every log, span, and error.
+   *
+   * @example
+   * ```ts
+   * logger.addBreadcrumb({ type: "http", message: "POST /api/checkout" })
+   * ```
+   */
+  addBreadcrumb(breadcrumb: { type: string; message: string; timestamp?: string }): void {
+    addBreadcrumbToState(this.state, {
+      type: breadcrumb.type,
+      message: breadcrumb.message,
+      timestamp: breadcrumb.timestamp || new Date().toISOString(),
+    })
+  }
+
+  // ---------------------------------------------------------------------------
+  // Internal helpers
+  // ---------------------------------------------------------------------------
+
+  /** Merge user, tags, and contexts from shared state into event metadata. */
+  private mergeStateMetadata(metadata?: Record<string, unknown>): Record<string, unknown> | undefined {
+    const { user, tags, contexts } = this.state
+    const hasUser = user !== null
+    const hasTags = Object.keys(tags).length > 0
+    const hasContexts = Object.keys(contexts).length > 0
+
+    if (!hasUser && !hasTags && !hasContexts && !metadata) return undefined
+
+    const result: Record<string, unknown> = { ...metadata }
+    if (hasUser) result.user = user
+    if (hasTags) result._tags = { ...tags }
+    if (hasContexts) result._contexts = { ...contexts }
+    return result
+  }
+
+  /** Run the beforeSend hook. If the hook throws, pass the event through. */
+  private applyBeforeSend(event: BeforeSendEvent): BeforeSendEvent | null {
+    if (!this.config.beforeSend) return event
+    try {
+      return this.config.beforeSend(event)
+    } catch {
+      return event
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Logging
+  // ---------------------------------------------------------------------------
 
   private log(
     level: LogLevel,
@@ -113,6 +243,9 @@ export class Logger {
       }
     }
 
+    // Inject user, tags, contexts from shared state
+    metadata = this.mergeStateMetadata(metadata)
+
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -125,6 +258,11 @@ export class Logger {
       vercel_id: this.requestMeta?.vercel_id,
     }
 
+    // Apply beforeSend hook
+    const hookResult = this.applyBeforeSend({ type: "log", data: entry })
+    if (hookResult === null) return
+    const finalEntry = hookResult.data as LogEntry
+
     if (this.config.debug) {
       const prefix = this.contextName ? `[${this.contextName}]` : ""
       const lvl = level.toUpperCase().padEnd(5)
@@ -136,14 +274,21 @@ export class Logger {
             : level === "debug"
               ? _originalConsole.debug
               : _originalConsole.log
-      if (metadata) {
-        consoleFn(`${lvl} ${prefix} ${message}`, metadata)
+      if (finalEntry.metadata) {
+        consoleFn(`${lvl} ${prefix} ${message}`, finalEntry.metadata)
       } else {
         consoleFn(`${lvl} ${prefix} ${message}`)
       }
     }
 
-    this.batcher.add(entry)
+    // Record breadcrumb
+    addBreadcrumbToState(this.state, {
+      type: "log",
+      message: `[${level}] ${message}`,
+      timestamp: entry.timestamp,
+    })
+
+    this.batcher.add(finalEntry)
   }
 
   /** Log a debug message. */
@@ -166,12 +311,16 @@ export class Logger {
     this.log("error", message, dataOrError, error)
   }
 
-  /** Create a context-scoped logger. All logs include the context name. */
+  // ---------------------------------------------------------------------------
+  // Child loggers
+  // ---------------------------------------------------------------------------
+
+  /** Create a context-scoped logger. All logs include the context name. Shares state with parent. */
   withContext(name: string): Logger {
-    return new Logger(this.config, name, this.requestMeta)
+    return new Logger(this.config, name, this.requestMeta, this.state)
   }
 
-  /** Create a request-scoped logger that extracts trace context from headers. */
+  /** Create a request-scoped logger that extracts trace context from headers. Shares state with parent. */
   forRequest(request: Request): Logger {
     const vercelId = request.headers.get("x-vercel-id") || undefined
     const requestId = request.headers.get("x-request-id") || undefined
@@ -183,35 +332,66 @@ export class Logger {
       span_id: spanId,
       request_id: requestId || (vercelId ? vercelId.split("::").pop() : undefined),
       vercel_id: vercelId,
-    })
+    }, this.state)
   }
 
-  /** Capture and report an error immediately (not batched). */
+  // ---------------------------------------------------------------------------
+  // Error capture
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Capture and report an error immediately (not batched).
+   * Automatically attaches breadcrumbs from the buffer and user context.
+   */
   captureError(
     error: Error | unknown,
     context?: {
       severity?: "low" | "medium" | "high" | "critical"
       userId?: string
       context?: Record<string, unknown>
-      breadcrumbs?: Array<{ type: string; message: string; timestamp: string }>
+      breadcrumbs?: Breadcrumb[]
     },
   ) {
     const err = error instanceof Error ? error : new Error(String(error))
+
+    // Record this error as a breadcrumb
+    addBreadcrumbToState(this.state, {
+      type: "error",
+      message: err.message,
+      timestamp: new Date().toISOString(),
+    })
+
+    // Merge user/tags/contexts into the error context
+    const enrichedContext: Record<string, unknown> = { ...context?.context }
+    if (this.state.user) enrichedContext.user = this.state.user
+    if (Object.keys(this.state.tags).length > 0) enrichedContext._tags = { ...this.state.tags }
+    if (Object.keys(this.state.contexts).length > 0) enrichedContext._contexts = { ...this.state.contexts }
+
     const report: ErrorReport = {
       error_message: err.message,
       stack_trace: err.stack || "",
       severity: context?.severity || "medium",
-      context: context?.context,
+      context: Object.keys(enrichedContext).length > 0 ? enrichedContext : undefined,
       trace_id: this.requestMeta?.trace_id,
-      user_id: context?.userId,
-      breadcrumbs: context?.breadcrumbs,
+      user_id: context?.userId || this.state.user?.id,
+      breadcrumbs: context?.breadcrumbs || [...this.state.breadcrumbs],
     }
-    this.transport.sendError(report)
+
+    // Apply beforeSend hook
+    const hookResult = this.applyBeforeSend({ type: "error", data: report })
+    if (hookResult === null) return
+    this.transport.sendError(hookResult.data as ErrorReport)
   }
+
+  // ---------------------------------------------------------------------------
+  // LLM usage
+  // ---------------------------------------------------------------------------
 
   /** Track LLM usage. Sends to /ingest/llm and logs for visibility. */
   llmUsage(report: LLMUsageReport) {
-    this.transport.sendLLMUsage({
+    const metadata = this.mergeStateMetadata(report.metadata)
+
+    const payload = {
       model: report.model,
       provider: report.provider,
       operation: report.operation,
@@ -219,8 +399,13 @@ export class Logger {
       output_tokens: report.outputTokens,
       cost_usd: report.costUsd || 0,
       latency_ms: report.latencyMs,
-      metadata: report.metadata,
-    })
+      metadata,
+    }
+
+    // Apply beforeSend hook
+    const hookResult = this.applyBeforeSend({ type: "llm", data: report })
+    if (hookResult === null) return
+    this.transport.sendLLMUsage(payload)
 
     this.log("info", `LLM call: ${report.model} (${report.operation})`, {
       llm_usage: {
@@ -233,6 +418,10 @@ export class Logger {
       },
     })
   }
+
+  // ---------------------------------------------------------------------------
+  // Tracing
+  // ---------------------------------------------------------------------------
 
   /** Start a span with automatic lifecycle (callback-based, recommended). */
   startSpan<T>(operation: string, fn: (span: Span) => T): T {
@@ -273,6 +462,13 @@ export class Logger {
     const startMs = Date.now()
     const childMeta = { ...this.requestMeta, trace_id: traceId, span_id: spanId }
 
+    // Record breadcrumb for span start
+    addBreadcrumbToState(this.state, {
+      type: "function",
+      message: operation,
+      timestamp: startTime,
+    })
+
     const span: InactiveSpan = {
       traceId,
       spanId,
@@ -288,16 +484,20 @@ export class Logger {
           start_time: startTime,
           duration_ms: durationMs,
           status: options?.status || "ok",
-          metadata: options?.metadata,
+          metadata: this.mergeStateMetadata(options?.metadata),
         }
-        this.transport.sendTrace(spanData)
+
+        // Apply beforeSend hook
+        const hookResult = this.applyBeforeSend({ type: "trace", data: spanData })
+        if (hookResult === null) return
+        this.transport.sendTrace(hookResult.data as SpanData)
       },
       startSpan: <T>(childOp: string, fn: (span: Span) => T): T => {
-        const childLogger = new Logger(this.config, this.contextName, childMeta)
+        const childLogger = new Logger(this.config, this.contextName, childMeta, this.state)
         return childLogger.startSpan(childOp, fn)
       },
       startInactiveSpan: (childOp: string): InactiveSpan => {
-        const childLogger = new Logger(this.config, this.contextName, childMeta)
+        const childLogger = new Logger(this.config, this.contextName, childMeta, this.state)
         return childLogger.startInactiveSpan(childOp)
       },
       getHeaders: () => ({
@@ -319,14 +519,30 @@ export class Logger {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
+
   /** Immediately flush all batched log entries. */
   flush() {
     this.batcher.flush()
   }
 
-  /** Stop the batch timer and flush remaining logs. */
-  destroy() {
-    this.batcher.destroy()
+  /**
+   * Stop the batch timer, flush remaining logs, and wait for in-flight requests.
+   *
+   * @param timeoutMs - Max time to wait for in-flight requests (default: 2000ms)
+   * @returns Promise that resolves when all data is sent or timeout is reached
+   *
+   * @example
+   * ```ts
+   * await logger.destroy()
+   * process.exit(0) // safe — data is confirmed sent
+   * ```
+   */
+  async destroy(timeoutMs?: number): Promise<void> {
+    await this.batcher.destroy()
+    await this.transport.drain(timeoutMs)
   }
 }
 

@@ -31,8 +31,8 @@ Built for **vibe coders and AI-assisted development** — sensible defaults, aut
 | [`@deeptracer/node`](./packages/node) | Node.js/Bun SDK — global errors, console capture, Hono & Express middleware | Stable |
 | [`@deeptracer/ai`](./packages/ai) | AI SDK wrappers — Vercel AI, OpenAI, Anthropic | Stable |
 | [`@deeptracer/browser`](./packages/browser) | Browser SDK — window error capture | Preview |
-| [`@deeptracer/react`](./packages/react) | React integration — error boundaries, hooks | Coming Soon |
-| [`@deeptracer/nextjs`](./packages/nextjs) | Next.js integration — middleware, server components | Coming Soon |
+| [`@deeptracer/react`](./packages/react) | React integration — provider, error boundary, hooks | Stable |
+| [`@deeptracer/nextjs`](./packages/nextjs) | Next.js integration — one-file server + client setup | Stable |
 
 ## Quick Start (Node.js / Bun)
 
@@ -66,6 +66,27 @@ const { text } = await ai.generateText({
 })
 ```
 
+## Quick Start (Next.js)
+
+```bash
+npm install @deeptracer/nextjs
+```
+
+```ts
+// instrumentation.ts — the only file you need to create
+import { init } from "@deeptracer/nextjs"
+
+export const { register, onRequestError } = init({
+  product: "my-app",
+  service: "web",
+  environment: "production",
+  endpoint: "https://your-deeptracer.com",
+  apiKey: process.env.DEEPTRACER_API_KEY!,
+})
+```
+
+All server-side errors (Server Components, Route Handlers, Middleware) are now captured automatically.
+
 ## Architecture
 
 ```
@@ -90,6 +111,230 @@ All platform packages (`node`, `browser`) re-export everything from `core`, so y
 - **Framework Middleware** — one-liner for Hono and Express (auto-traces every request)
 - **Console Capture** — forward `console.*` calls to DeepTracer
 - **Zero Dependencies** — core has no runtime dependencies
+
+## Prompts for AI Agents
+
+Copy-paste these prompts into Cursor, Claude Code, Copilot, or any AI coding assistant.
+
+<details>
+<summary><strong>Add DeepTracer to my Next.js app</strong></summary>
+
+```
+Install @deeptracer/nextjs and set up full observability for my Next.js app.
+
+Server-side: Create instrumentation.ts in the project root with:
+
+import { init } from "@deeptracer/nextjs"
+
+export const { register, onRequestError } = init({
+  product: "<PRODUCT_NAME>",
+  service: "web",
+  environment: "production",
+  endpoint: "<DEEPTRACER_ENDPOINT>",
+  apiKey: process.env.DEEPTRACER_API_KEY!,
+})
+
+Client-side: Add DeepTracerProvider to app/layout.tsx:
+
+import { DeepTracerProvider } from "@deeptracer/nextjs/client"
+
+Wrap {children} with:
+<DeepTracerProvider config={{
+  product: "<PRODUCT_NAME>",
+  service: "web",
+  environment: "production",
+  endpoint: process.env.NEXT_PUBLIC_DEEPTRACER_ENDPOINT!,
+  apiKey: process.env.NEXT_PUBLIC_DEEPTRACER_API_KEY!,
+}}>
+
+Error boundary: Create app/global-error.tsx with:
+
+"use client"
+export { DeepTracerErrorPage as default } from "@deeptracer/nextjs/client"
+
+Add DEEPTRACER_API_KEY, NEXT_PUBLIC_DEEPTRACER_ENDPOINT, and NEXT_PUBLIC_DEEPTRACER_API_KEY to .env.local
+```
+
+</details>
+
+<details>
+<summary><strong>Add DeepTracer to my Hono / Express API</strong></summary>
+
+```
+Install @deeptracer/node and @deeptracer/ai. Set up DeepTracer observability.
+
+1. Create a logger with init() from @deeptracer/node:
+
+import { init, honoMiddleware } from "@deeptracer/node"
+
+const logger = init({
+  product: "<PRODUCT_NAME>",
+  service: "api",
+  environment: "production",
+  endpoint: "<DEEPTRACER_ENDPOINT>",
+  apiKey: process.env.DEEPTRACER_API_KEY!,
+})
+
+2. Add middleware to the app:
+   - Hono: app.use(honoMiddleware(logger))
+   - Express: app.use(expressMiddleware(logger))
+
+3. If using AI/LLM calls, also install @deeptracer/ai and wrap them:
+   import { wrapVercelAI } from "@deeptracer/ai"
+   const ai = wrapVercelAI(logger, { generateText })
+
+Export the logger instance so other files can import it for manual logging.
+```
+
+</details>
+
+<details>
+<summary><strong>Add error tracking to my React app</strong></summary>
+
+```
+Install @deeptracer/react. Set up error tracking for my React app.
+
+1. Wrap the app with DeepTracerProvider in the root component:
+
+import { DeepTracerProvider } from "@deeptracer/react"
+
+<DeepTracerProvider config={{
+  product: "<PRODUCT_NAME>",
+  service: "web",
+  environment: "production",
+  endpoint: "<DEEPTRACER_ENDPOINT>",
+  apiKey: "<DEEPTRACER_API_KEY>",
+}}>
+  <App />
+</DeepTracerProvider>
+
+2. Add error boundaries around critical sections:
+
+import { DeepTracerErrorBoundary } from "@deeptracer/react"
+
+<DeepTracerErrorBoundary fallback={<div>Something went wrong</div>}>
+  <MyComponent />
+</DeepTracerErrorBoundary>
+
+3. Use the useLogger() hook in components for manual logging:
+
+import { useLogger } from "@deeptracer/react"
+const logger = useLogger()
+logger.info("User clicked checkout", { cartSize: 3 })
+```
+
+</details>
+
+<details>
+<summary><strong>Add LLM usage tracking to my AI app</strong></summary>
+
+```
+Install @deeptracer/node and @deeptracer/ai. Track all LLM API calls automatically.
+
+1. Initialize the logger:
+
+import { init } from "@deeptracer/node"
+const logger = init({
+  product: "<PRODUCT_NAME>",
+  service: "api",
+  environment: "production",
+  endpoint: "<DEEPTRACER_ENDPOINT>",
+  apiKey: process.env.DEEPTRACER_API_KEY!,
+})
+
+2. Wrap your AI SDK calls:
+
+For Vercel AI SDK:
+import { wrapVercelAI } from "@deeptracer/ai"
+const ai = wrapVercelAI(logger, { generateText, streamText, generateObject })
+// Use ai.generateText(), ai.streamText() etc. — usage is tracked automatically
+
+For OpenAI SDK:
+import { wrapOpenAI } from "@deeptracer/ai"
+const trackedClient = wrapOpenAI(logger, openaiClient)
+// Use trackedClient.chat.completions.create() — usage is tracked automatically
+
+For Anthropic SDK:
+import { wrapAnthropic } from "@deeptracer/ai"
+const trackedClient = wrapAnthropic(logger, anthropicClient)
+// Use trackedClient.messages.create() — usage is tracked automatically
+
+Every call automatically logs: model, provider, input/output tokens, latency, and cost.
+```
+
+</details>
+
+<details>
+<summary><strong>Wrap my Next.js Server Actions with tracing</strong></summary>
+
+```
+I already have @deeptracer/nextjs set up with instrumentation.ts.
+Now wrap my Server Actions with DeepTracer tracing.
+
+In each server action file, import withServerAction and the logger:
+
+"use server"
+import { withServerAction } from "@deeptracer/nextjs"
+import { logger } from "@/instrumentation"
+
+export async function myAction(formData: FormData) {
+  return withServerAction(logger, "myAction", async () => {
+    // ... existing action code
+  })
+}
+
+This creates a span for each action call and automatically captures any errors.
+Do this for every server action in the app.
+```
+
+</details>
+
+<details>
+<summary><strong>Wrap my Next.js Route Handlers with tracing</strong></summary>
+
+```
+I already have @deeptracer/nextjs set up with instrumentation.ts.
+Now wrap my App Router Route Handlers with DeepTracer tracing.
+
+In each route.ts file, import withRouteHandler and the logger:
+
+import { withRouteHandler } from "@deeptracer/nextjs"
+import { logger } from "@/instrumentation"
+
+export const GET = withRouteHandler(logger, "GET /api/users", async (request) => {
+  // ... existing handler code
+  return Response.json(data)
+})
+
+export const POST = withRouteHandler(logger, "POST /api/users", async (request) => {
+  // ... existing handler code
+  return Response.json(result, { status: 201 })
+})
+
+This creates a request-scoped span, extracts trace context from headers,
+and captures any errors. Do this for every route handler in the app.
+```
+
+</details>
+
+<details>
+<summary><strong>Add user context and tags to all events</strong></summary>
+
+```
+I already have DeepTracer set up. After a user logs in, I want all subsequent
+logs, errors, and traces to include the user's info and custom tags.
+
+After authentication, call:
+
+logger.setUser({ id: user.id, email: user.email, plan: user.plan })
+logger.setTags({ release: "1.2.3", region: "us-east-1" })
+logger.setContext("organization", { id: org.id, name: org.name })
+
+All events from this point forward will include this metadata.
+To clear: logger.clearUser(), logger.clearTags(), logger.clearContext()
+```
+
+</details>
 
 ## Development
 
