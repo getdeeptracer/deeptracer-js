@@ -181,7 +181,9 @@ export class Logger {
   // ---------------------------------------------------------------------------
 
   /** Merge user, tags, and contexts from shared state into event metadata. */
-  private mergeStateMetadata(metadata?: Record<string, unknown>): Record<string, unknown> | undefined {
+  private mergeStateMetadata(
+    metadata?: Record<string, unknown>,
+  ): Record<string, unknown> | undefined {
     const { user, tags, contexts } = this.state
     const hasUser = user !== null
     const hasTags = Object.keys(tags).length > 0
@@ -221,11 +223,7 @@ export class Logger {
 
     if (dataOrError instanceof Error) {
       error = dataOrError
-    } else if (
-      dataOrError &&
-      typeof dataOrError === "object" &&
-      !Array.isArray(dataOrError)
-    ) {
+    } else if (dataOrError && typeof dataOrError === "object" && !Array.isArray(dataOrError)) {
       metadata = dataOrError as Record<string, unknown>
       error = maybeError
     } else if (dataOrError !== undefined) {
@@ -327,12 +325,17 @@ export class Logger {
     const traceId = request.headers.get("x-trace-id") || undefined
     const spanId = request.headers.get("x-span-id") || undefined
 
-    return new Logger(this.config, this.contextName, {
-      trace_id: traceId,
-      span_id: spanId,
-      request_id: requestId || (vercelId ? vercelId.split("::").pop() : undefined),
-      vercel_id: vercelId,
-    }, this.state)
+    return new Logger(
+      this.config,
+      this.contextName,
+      {
+        trace_id: traceId,
+        span_id: spanId,
+        request_id: requestId || (vercelId ? vercelId.split("::").pop() : undefined),
+        vercel_id: vercelId,
+      },
+      this.state,
+    )
   }
 
   // ---------------------------------------------------------------------------
@@ -365,7 +368,8 @@ export class Logger {
     const enrichedContext: Record<string, unknown> = { ...context?.context }
     if (this.state.user) enrichedContext.user = this.state.user
     if (Object.keys(this.state.tags).length > 0) enrichedContext._tags = { ...this.state.tags }
-    if (Object.keys(this.state.contexts).length > 0) enrichedContext._contexts = { ...this.state.contexts }
+    if (Object.keys(this.state.contexts).length > 0)
+      enrichedContext._contexts = { ...this.state.contexts }
 
     const report: ErrorReport = {
       error_message: err.message,
@@ -444,8 +448,14 @@ export class Logger {
 
     if (result instanceof Promise) {
       return result.then(
-        (value) => { inactive.end({ status: "ok" }); return value },
-        (err) => { inactive.end({ status: "error" }); throw err },
+        (value) => {
+          inactive.end({ status: "ok" })
+          return value
+        },
+        (err) => {
+          inactive.end({ status: "error" })
+          throw err
+        },
       ) as T
     }
 

@@ -207,10 +207,12 @@ export class DeepTracerErrorBoundary extends Component<ErrorBoundaryProps, Error
     if (this.state.hasError && this.state.error) {
       const { fallback } = this.props
       if (typeof fallback === "function") {
-        return (fallback as (props: { error: Error; resetErrorBoundary: () => void }) => ReactNode)({
-          error: this.state.error,
-          resetErrorBoundary: this.resetErrorBoundary,
-        })
+        return (fallback as (props: { error: Error; resetErrorBoundary: () => void }) => ReactNode)(
+          {
+            error: this.state.error,
+            resetErrorBoundary: this.resetErrorBoundary,
+          },
+        )
       }
       if (fallback) {
         return fallback

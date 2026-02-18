@@ -24,10 +24,7 @@ import type { Logger } from "@deeptracer/core"
  * })
  * ```
  */
-export function wrapVercelAI<T extends Record<string, any>>(
-  logger: Logger,
-  fns: T,
-): T {
+export function wrapVercelAI<T extends Record<string, any>>(logger: Logger, fns: T): T {
   const wrapped: Record<string, any> = {}
 
   for (const [name, fn] of Object.entries(fns)) {
@@ -48,18 +45,14 @@ export function wrapVercelAI<T extends Record<string, any>>(
   return wrapped as T
 }
 
-function wrapVercelGenerate(logger: Logger, fn: Function, operation: string) {
+function wrapVercelGenerate(logger: Logger, fn: (...args: any[]) => any, operation: string) {
   return async (params: any, ...rest: any[]) => {
     const startMs = Date.now()
     const result = await fn(params, ...rest)
     const latencyMs = Date.now() - startMs
 
-    const model = result?.response?.modelId
-      || params?.model?.modelId
-      || "unknown"
-    const provider = params?.model?.provider
-      || extractProviderFromModelId(model)
-      || "unknown"
+    const model = result?.response?.modelId || params?.model?.modelId || "unknown"
+    const provider = params?.model?.provider || extractProviderFromModelId(model) || "unknown"
 
     logger.llmUsage({
       model,
@@ -74,7 +67,7 @@ function wrapVercelGenerate(logger: Logger, fn: Function, operation: string) {
   }
 }
 
-function wrapVercelStream(logger: Logger, fn: Function, operation: string) {
+function wrapVercelStream(logger: Logger, fn: (...args: any[]) => any, operation: string) {
   return (params: any, ...rest: any[]) => {
     const startMs = Date.now()
     const result = fn(params, ...rest)
@@ -105,7 +98,13 @@ function wrapVercelStream(logger: Logger, fn: Function, operation: string) {
 /** Try to extract provider name from a model ID string */
 function extractProviderFromModelId(modelId: string): string | undefined {
   if (!modelId || modelId === "unknown") return undefined
-  if (modelId.startsWith("gpt-") || modelId.startsWith("o1") || modelId.startsWith("o3") || modelId.startsWith("o4")) return "openai"
+  if (
+    modelId.startsWith("gpt-") ||
+    modelId.startsWith("o1") ||
+    modelId.startsWith("o3") ||
+    modelId.startsWith("o4")
+  )
+    return "openai"
   if (modelId.startsWith("claude-")) return "anthropic"
   if (modelId.startsWith("gemini-")) return "google"
   if (modelId.startsWith("mistral") || modelId.startsWith("mixtral")) return "mistral"

@@ -70,9 +70,7 @@ export class Transport {
           await this.sleep(this.jitter(baseDelays[attempt]))
           continue
         }
-        console.warn(
-          `[@deeptracer/core] Failed to send ${label} (exhausted ${maxRetries} retries)`,
-        )
+        console.warn(`[@deeptracer/core] Failed to send ${label} (exhausted ${maxRetries} retries)`)
       }
     }
   }

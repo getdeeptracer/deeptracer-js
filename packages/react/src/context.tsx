@@ -119,14 +119,9 @@ export function DeepTracerProvider({
     return () => {
       newLogger.destroy().catch(() => {})
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return (
-    <DeepTracerContext.Provider value={logger}>
-      {children}
-    </DeepTracerContext.Provider>
-  )
+  return <DeepTracerContext.Provider value={logger}>{children}</DeepTracerContext.Provider>
 }
 
 /** Read LoggerConfig from NEXT_PUBLIC_DEEPTRACER_* env vars. Returns null if required vars missing. */
@@ -141,12 +136,12 @@ function readConfigFromEnv(): LoggerConfig | null {
   if (!endpoint || !apiKey || !product) return null
 
   const service =
-    (typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_DEEPTRACER_SERVICE : undefined) ?? "web"
+    (typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_DEEPTRACER_SERVICE : undefined) ??
+    "web"
   const environment =
-    ((typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_DEEPTRACER_ENVIRONMENT : undefined) as
-      | "production"
-      | "staging"
-      | undefined) ?? "production"
+    ((typeof process !== "undefined"
+      ? process.env?.NEXT_PUBLIC_DEEPTRACER_ENVIRONMENT
+      : undefined) as "production" | "staging" | undefined) ?? "production"
 
   return { product, service, environment, endpoint, apiKey }
 }

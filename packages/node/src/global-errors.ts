@@ -26,10 +26,9 @@ export function captureGlobalErrors(logger: Logger): void {
   })
 
   process.on("unhandledRejection", (reason: unknown) => {
-    logger.captureError(
-      reason instanceof Error ? reason : new Error(String(reason)),
-      { severity: "high" },
-    )
+    logger.captureError(reason instanceof Error ? reason : new Error(String(reason)), {
+      severity: "high",
+    })
     logger.flush()
   })
 }

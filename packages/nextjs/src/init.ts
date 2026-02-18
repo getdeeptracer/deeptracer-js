@@ -86,8 +86,7 @@ export function init(config: NextjsConfig): InitResult {
   const shouldCaptureConsole = config.captureConsole === true
 
   function register(): void {
-    const runtime =
-      typeof process !== "undefined" ? process.env?.NEXT_RUNTIME : undefined
+    const runtime = typeof process !== "undefined" ? process.env?.NEXT_RUNTIME : undefined
 
     if (runtime === "nodejs") {
       if (shouldCaptureGlobalErrors) {
@@ -100,13 +99,10 @@ export function init(config: NextjsConfig): InitResult {
         })
 
         process.on("unhandledRejection", (reason: unknown) => {
-          logger.captureError(
-            reason instanceof Error ? reason : new Error(String(reason)),
-            {
-              severity: "high",
-              context: { source: "unhandledRejection", runtime: "nodejs" },
-            },
-          )
+          logger.captureError(reason instanceof Error ? reason : new Error(String(reason)), {
+            severity: "high",
+            context: { source: "unhandledRejection", runtime: "nodejs" },
+          })
           logger.flush()
         })
       }
@@ -159,9 +155,7 @@ export function init(config: NextjsConfig): InitResult {
     request: { path: string; method: string; headers: Record<string, string> },
     context: { routerKind: string; routePath: string; routeType: string },
   ): Promise<void> {
-    const reqLogger = logger.withContext(
-      `${context.routeType}:${context.routePath}`,
-    )
+    const reqLogger = logger.withContext(`${context.routeType}:${context.routePath}`)
 
     reqLogger.addBreadcrumb({
       type: "http",

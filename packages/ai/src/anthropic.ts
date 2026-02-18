@@ -52,7 +52,8 @@ export function wrapAnthropic<T extends Record<string, any>>(logger: Logger, cli
       const latencyMs = Date.now() - startMs
 
       if (stream && typeof stream.finalMessage === "function") {
-        stream.finalMessage()
+        stream
+          .finalMessage()
           .then((message: any) => {
             const totalLatencyMs = Date.now() - startMs
             logger.llmUsage({
