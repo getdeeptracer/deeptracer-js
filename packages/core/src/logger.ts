@@ -45,11 +45,11 @@ export const _originalConsole = {
  * import { createLogger } from "@deeptracer/core"
  *
  * const logger = createLogger({
+ *   secretKey: "dt_secret_xxx",
+ *   endpoint: "https://deeptracer.example.com",
  *   product: "my-app",
  *   service: "api",
  *   environment: "production",
- *   endpoint: "https://deeptracer.example.com",
- *   apiKey: "dt_live_xxx",
  * })
  *
  * logger.setUser({ id: "u_123", email: "user@example.com" })
@@ -80,6 +80,19 @@ export class Logger {
     this.contextName = contextName
     this.requestMeta = requestMeta
     this.state = state ?? createLoggerState(config.maxBreadcrumbs ?? 20)
+
+    // Validation warnings — fail gracefully, never crash
+    if (!config.secretKey && !config.publicKey) {
+      _originalConsole.error(
+        "[@deeptracer/core] No `secretKey` or `publicKey` provided. Events will not be authenticated.",
+      )
+    }
+    if (!config.endpoint) {
+      _originalConsole.error(
+        "[@deeptracer/core] No `endpoint` provided. Events will not be sent.",
+      )
+    }
+
     this.transport = new Transport(config)
     this.batcher = new Batcher(
       { batchSize: config.batchSize, flushIntervalMs: config.flushIntervalMs },

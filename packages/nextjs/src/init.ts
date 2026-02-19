@@ -1,10 +1,11 @@
 import { createLogger, type Logger, type LoggerConfig } from "@deeptracer/core"
+import { parseConsoleArgs } from "@deeptracer/core/internal"
 
 /**
  * Configuration for the DeepTracer Next.js integration.
- * Extends the base LoggerConfig with Next.js-specific options.
+ * All base fields are optional — reads from environment variables.
  */
-export interface NextjsConfig extends LoggerConfig {
+export interface NextjsConfig extends Partial<LoggerConfig> {
   /**
    * Automatically capture uncaught exceptions and unhandled rejections
    * via Node.js process events (only in Node.js runtime, not Edge).
@@ -45,7 +46,7 @@ export interface InitResult {
    *
    * @example
    * ```ts
-   * const deeptracer = init({ ... })
+   * const deeptracer = init()
    * export const { register, onRequestError } = deeptracer
    * export const logger = deeptracer.logger
    * ```
@@ -57,33 +58,66 @@ export interface InitResult {
  * Initialize DeepTracer for Next.js. Returns `register` and `onRequestError`
  * to be re-exported from your `instrumentation.ts` file.
  *
- * This is the **only setup required** for server-side error capture in Next.js.
- * Every server-side error (Server Components, Route Handlers, Middleware) is
- * automatically captured via Next.js's built-in `onRequestError` hook.
+ * All config fields are optional — reads from environment variables:
+ * - `DEEPTRACER_SECRET_KEY` — server API key (`dt_secret_...`)
+ * - `DEEPTRACER_ENDPOINT` — ingestion API URL
+ * - `DEEPTRACER_PRODUCT` — product name (default: `"unknown"`)
+ * - `DEEPTRACER_SERVICE` — service name (default: `"web"`)
+ * - `DEEPTRACER_ENVIRONMENT` — environment (default: `NODE_ENV` or `"production"`)
  *
- * @param config - Logger configuration with optional Next.js-specific options
+ * Explicit config values override environment variables.
+ *
+ * @param config - Optional configuration (overrides env vars)
  * @returns Object with `register`, `onRequestError`, and `logger`
  *
  * @example
- * Create `instrumentation.ts` in your project root:
+ * Zero-config — the entire `instrumentation.ts` file:
+ * ```ts
+ * import { init } from "@deeptracer/nextjs"
+ * export const { register, onRequestError, logger } = init()
+ * ```
+ *
+ * @example
+ * Explicit config:
  * ```ts
  * import { init } from "@deeptracer/nextjs"
  *
  * export const { register, onRequestError } = init({
- *   product: "my-app",
- *   service: "web",
- *   environment: "production",
+ *   secretKey: process.env.DEEPTRACER_SECRET_KEY!,
  *   endpoint: "https://deeptracer.example.com",
- *   apiKey: process.env.DEEPTRACER_API_KEY!,
+ *   product: "my-app",
  * })
  * ```
- *
- * That's it. All server-side errors are now captured automatically.
  */
-export function init(config: NextjsConfig): InitResult {
-  const logger = createLogger(config)
-  const shouldCaptureGlobalErrors = config.captureGlobalErrors !== false
-  const shouldCaptureConsole = config.captureConsole === true
+export function init(config?: NextjsConfig): InitResult {
+  const resolved: LoggerConfig = {
+    secretKey: config?.secretKey ?? process.env.DEEPTRACER_SECRET_KEY,
+    endpoint: config?.endpoint ?? process.env.DEEPTRACER_ENDPOINT,
+    product: config?.product ?? process.env.DEEPTRACER_PRODUCT ?? "unknown",
+    service: config?.service ?? process.env.DEEPTRACER_SERVICE ?? "web",
+    environment:
+      config?.environment ?? process.env.DEEPTRACER_ENVIRONMENT ?? process.env.NODE_ENV ?? "production",
+    batchSize: config?.batchSize,
+    flushIntervalMs: config?.flushIntervalMs,
+    debug: config?.debug,
+    maxBreadcrumbs: config?.maxBreadcrumbs,
+    beforeSend: config?.beforeSend,
+  }
+
+  if (!resolved.secretKey) {
+    throw new Error(
+      "[@deeptracer/nextjs] Missing secret key. Set `DEEPTRACER_SECRET_KEY` env var or pass `secretKey` to init().",
+    )
+  }
+  if (!resolved.endpoint) {
+    throw new Error(
+      "[@deeptracer/nextjs] Missing endpoint. Set `DEEPTRACER_ENDPOINT` env var or pass `endpoint` to init().",
+    )
+  }
+
+  const logger = createLogger(resolved)
+  const shouldCaptureGlobalErrors = config?.captureGlobalErrors !== false
+  const shouldCaptureConsole = config?.captureConsole === true
 
   function register(): void {
     const runtime = typeof process !== "undefined" ? process.env?.NEXT_RUNTIME : undefined
@@ -115,37 +149,42 @@ export function init(config: NextjsConfig): InitResult {
         const origDebug = console.debug
 
         console.log = (...args: unknown[]) => {
-          logger.info(args.map(String).join(" "))
+          const { message, metadata } = parseConsoleArgs(args)
+          logger.info(message, metadata)
           origLog(...args)
         }
         console.info = (...args: unknown[]) => {
-          logger.info(args.map(String).join(" "))
+          const { message, metadata } = parseConsoleArgs(args)
+          logger.info(message, metadata)
           origInfo(...args)
         }
         console.warn = (...args: unknown[]) => {
-          logger.warn(args.map(String).join(" "))
+          const { message, metadata } = parseConsoleArgs(args)
+          logger.warn(message, metadata)
           origWarn(...args)
         }
         console.error = (...args: unknown[]) => {
-          logger.error(args.map(String).join(" "))
+          const { message, metadata } = parseConsoleArgs(args)
+          logger.error(message, metadata)
           origError(...args)
         }
         console.debug = (...args: unknown[]) => {
-          logger.debug(args.map(String).join(" "))
+          const { message, metadata } = parseConsoleArgs(args)
+          logger.debug(message, metadata)
           origDebug(...args)
         }
       }
 
       logger.info("DeepTracer initialized", {
         runtime: "nodejs",
-        product: config.product,
-        service: config.service,
+        product: resolved.product,
+        service: resolved.service,
       })
     } else if (runtime === "edge") {
       logger.info("DeepTracer initialized", {
         runtime: "edge",
-        product: config.product,
-        service: config.service,
+        product: resolved.product,
+        service: resolved.service,
       })
     }
   }

@@ -1,18 +1,14 @@
 import { defineConfig } from "tsup"
+import pkg from "./package.json"
 
 export default defineConfig({
   entry: ["src/index.ts", "src/client.ts"],
   format: ["esm", "cjs"],
-  dts: true,
+  dts: { compilerOptions: { composite: false } },
   clean: true,
   target: "es2022",
   external: [
-    "@deeptracer/core",
-    "@deeptracer/node",
-    "@deeptracer/browser",
-    "@deeptracer/react",
-    "next",
-    "react",
-    "react-dom",
+    ...Object.keys(pkg.dependencies ?? {}),
+    ...Object.keys(pkg.peerDependencies ?? {}),
   ],
 })

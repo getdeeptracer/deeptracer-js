@@ -26,11 +26,9 @@ export interface DeepTracerProviderProps {
    * @example
    * ```tsx
    * <DeepTracerProvider config={{
-   *   product: "my-app",
-   *   service: "web",
-   *   environment: "production",
+   *   publicKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY!,
    *   endpoint: process.env.NEXT_PUBLIC_DEEPTRACER_ENDPOINT!,
-   *   apiKey: process.env.NEXT_PUBLIC_DEEPTRACER_API_KEY!,
+   *   product: "my-app",
    * }}>
    * ```
    */
@@ -65,11 +63,9 @@ export interface DeepTracerProviderProps {
  * export default function App({ children }) {
  *   return (
  *     <DeepTracerProvider config={{
+ *       publicKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY!,
+ *       endpoint: process.env.NEXT_PUBLIC_DEEPTRACER_ENDPOINT!,
  *       product: "my-app",
- *       service: "web",
- *       environment: "production",
- *       endpoint: "https://deeptracer.example.com",
- *       apiKey: process.env.NEXT_PUBLIC_DEEPTRACER_API_KEY!,
  *     }}>
  *       {children}
  *     </DeepTracerProvider>
@@ -124,24 +120,26 @@ export function DeepTracerProvider({
   return <DeepTracerContext.Provider value={logger}>{children}</DeepTracerContext.Provider>
 }
 
-/** Read LoggerConfig from NEXT_PUBLIC_DEEPTRACER_* env vars. Returns null if required vars missing. */
-function readConfigFromEnv(): LoggerConfig | null {
-  const endpoint =
-    typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_DEEPTRACER_ENDPOINT : undefined
-  const apiKey =
-    typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_DEEPTRACER_API_KEY : undefined
-  const product =
-    typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_DEEPTRACER_PRODUCT : undefined
+/**
+ * Read LoggerConfig from NEXT_PUBLIC_DEEPTRACER_* env vars.
+ * Returns null if required vars (key + endpoint) are missing.
+ *
+ * @internal Exported for use by error-boundary.tsx fallback.
+ */
+export function readConfigFromEnv(): LoggerConfig | null {
+  const safeEnv = (name: string): string | undefined =>
+    typeof process !== "undefined" ? process.env?.[name] : undefined
 
-  if (!endpoint || !apiKey || !product) return null
+  const publicKey = safeEnv("NEXT_PUBLIC_DEEPTRACER_KEY")
+  const endpoint = safeEnv("NEXT_PUBLIC_DEEPTRACER_ENDPOINT")
 
-  const service =
-    (typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_DEEPTRACER_SERVICE : undefined) ??
-    "web"
-  const environment =
-    ((typeof process !== "undefined"
-      ? process.env?.NEXT_PUBLIC_DEEPTRACER_ENVIRONMENT
-      : undefined) as "production" | "staging" | undefined) ?? "production"
+  if (!publicKey || !endpoint) return null
 
-  return { product, service, environment, endpoint, apiKey }
+  return {
+    publicKey,
+    endpoint,
+    product: safeEnv("NEXT_PUBLIC_DEEPTRACER_PRODUCT") ?? "unknown",
+    service: safeEnv("NEXT_PUBLIC_DEEPTRACER_SERVICE") ?? "web",
+    environment: safeEnv("NEXT_PUBLIC_DEEPTRACER_ENVIRONMENT") ?? "production",
+  }
 }

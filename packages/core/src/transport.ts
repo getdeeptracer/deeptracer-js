@@ -16,9 +16,25 @@ export class Transport {
   constructor(
     private config: Pick<
       LoggerConfig,
-      "endpoint" | "apiKey" | "product" | "service" | "environment"
+      "endpoint" | "secretKey" | "publicKey" | "product" | "service" | "environment"
     >,
-  ) {}
+  ) {
+    // Loud warning if a secret key is used in a browser context
+    if (
+      config.secretKey?.startsWith("dt_secret_") &&
+      typeof globalThis.window !== "undefined"
+    ) {
+      console.error(
+        "[@deeptracer/core] WARNING: `secretKey` (dt_secret_...) detected in a browser bundle. " +
+          "This exposes your server key to end users. Use `publicKey` (dt_public_...) for client-side code.",
+      )
+    }
+  }
+
+  /** Resolve the auth key: prefer secretKey (server), fall back to publicKey (client). */
+  private get authKey(): string {
+    return this.config.secretKey ?? this.config.publicKey ?? ""
+  }
 
   /**
    * Send a request with automatic retry and exponential backoff.
@@ -39,7 +55,7 @@ export class Transport {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${this.config.apiKey}`,
+            Authorization: `Bearer ${this.authKey}`,
             "x-deeptracer-sdk": `${SDK_NAME}/${SDK_VERSION}`,
           },
           body: JSON.stringify(body),

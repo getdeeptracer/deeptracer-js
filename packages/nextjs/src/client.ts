@@ -5,18 +5,32 @@
  *
  * @example
  * ```tsx
- * // app/layout.tsx — add provider for client-side error capture
+ * // app/layout.tsx — zero-config provider (reads NEXT_PUBLIC_DEEPTRACER_* env vars)
+ * import { DeepTracerProvider } from "@deeptracer/nextjs/client"
+ *
+ * export default function RootLayout({ children }: { children: React.ReactNode }) {
+ *   return (
+ *     <html><body>
+ *       <DeepTracerProvider>
+ *         {children}
+ *       </DeepTracerProvider>
+ *     </body></html>
+ *   )
+ * }
+ * ```
+ *
+ * @example
+ * ```tsx
+ * // app/layout.tsx — explicit config
  * import { DeepTracerProvider } from "@deeptracer/nextjs/client"
  *
  * export default function RootLayout({ children }: { children: React.ReactNode }) {
  *   return (
  *     <html><body>
  *       <DeepTracerProvider config={{
- *         product: "my-app",
- *         service: "web",
- *         environment: "production",
+ *         publicKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY!,
  *         endpoint: process.env.NEXT_PUBLIC_DEEPTRACER_ENDPOINT!,
- *         apiKey: process.env.NEXT_PUBLIC_DEEPTRACER_API_KEY!,
+ *         product: "my-app",
  *       }}>
  *         {children}
  *       </DeepTracerProvider>

@@ -1,28 +1,45 @@
 /**
  * Configuration for creating a DeepTracer logger instance.
  *
+ * All fields are optional when environment variables are set.
+ * Server packages read `DEEPTRACER_SECRET_KEY`, `DEEPTRACER_ENDPOINT`, etc.
+ * Client packages read `NEXT_PUBLIC_DEEPTRACER_KEY`, `NEXT_PUBLIC_DEEPTRACER_ENDPOINT`, etc.
+ *
  * @example
+ * Server (Node.js / Next.js instrumentation):
  * ```ts
  * const config: LoggerConfig = {
- *   product: "my-app",
- *   service: "api-server",
- *   environment: "production",
+ *   secretKey: "dt_secret_xxx",
  *   endpoint: "https://deeptracer.example.com",
- *   apiKey: "dt_live_xxx",
+ *   product: "my-app",
+ *   service: "api",
+ *   environment: "production",
+ * }
+ * ```
+ *
+ * @example
+ * Client (browser / React):
+ * ```ts
+ * const config: LoggerConfig = {
+ *   publicKey: "dt_public_xxx",
+ *   endpoint: "https://deeptracer.example.com",
+ *   product: "my-app",
  * }
  * ```
  */
 export interface LoggerConfig {
-  /** Product name (e.g., "spotbeam", "macro") */
-  product: string
-  /** Service name (e.g., "api", "worker", "web") */
-  service: string
-  /** Deployment environment */
-  environment: "production" | "staging"
+  /** Server-side API key (prefix: `dt_secret_`). Never expose in client bundles. */
+  secretKey?: string
+  /** Client-side API key (prefix: `dt_public_`). Safe for browser bundles. */
+  publicKey?: string
+  /** Product name (e.g., "spotbeam", "macro"). Default: `"unknown"` */
+  product?: string
+  /** Service name (e.g., "api", "worker", "web"). Default: `"web"` */
+  service?: string
+  /** Deployment environment (e.g., "production", "staging", "development"). Default: `NODE_ENV` or `"production"` */
+  environment?: string
   /** DeepTracer ingestion endpoint URL */
-  endpoint: string
-  /** DeepTracer API key for authentication */
-  apiKey: string
+  endpoint?: string
   /** Number of log entries to batch before sending. Default: 50 */
   batchSize?: number
   /** Milliseconds between automatic batch flushes. Default: 5000 */
