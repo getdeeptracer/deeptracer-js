@@ -1,3 +1,4 @@
+// Server-side entry — resolved by bundler when "node" condition matches
 // Re-export everything from node SDK (Next.js server runs on Node.js)
 export * from "@deeptracer/node"
 

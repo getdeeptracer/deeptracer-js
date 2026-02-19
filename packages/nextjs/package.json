@@ -3,19 +3,35 @@
   "version": "0.4.0",
   "description": "DeepTracer Next.js integration — automatic server-side error capture with one-file setup",
   "type": "module",
-  "main": "dist/index.cjs",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/index.server.cjs",
+  "module": "dist/index.server.js",
+  "types": "dist/index.types.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "types": "./dist/index.types.d.ts",
+      "browser": {
+        "import": "./dist/index.client.js",
+        "require": "./dist/index.client.cjs"
+      },
+      "edge-light": {
+        "import": "./dist/index.server.js",
+        "require": "./dist/index.server.cjs"
+      },
+      "worker": {
+        "import": "./dist/index.server.js",
+        "require": "./dist/index.server.cjs"
+      },
+      "node": {
+        "import": "./dist/index.server.js",
+        "require": "./dist/index.server.cjs"
+      },
+      "import": "./dist/index.server.js",
+      "require": "./dist/index.server.cjs"
     },
     "./client": {
-      "types": "./dist/client.d.ts",
-      "import": "./dist/client.js",
-      "require": "./dist/client.cjs"
+      "types": "./dist/index.client.d.ts",
+      "import": "./dist/index.client.js",
+      "require": "./dist/index.client.cjs"
     }
   },
   "files": ["dist", "README.md"],
@@ -38,6 +54,7 @@
     "react-dom": ">=18"
   },
   "scripts": {
+    "prebuild": "rm -rf dist",
     "build": "tsup",
     "dev": "tsup --watch"
   }

@@ -1,4 +1,4 @@
-import type { LoggerConfig } from "@deeptracer/core"
+import type { LoggerConfig, LogLevel } from "@deeptracer/core"
 import { createLogger, type Logger } from "@deeptracer/core"
 import { captureGlobalErrors } from "./global-errors"
 
@@ -12,6 +12,7 @@ import { captureGlobalErrors } from "./global-errors"
  * - `DEEPTRACER_PRODUCT` — product name (default: `"unknown"`)
  * - `DEEPTRACER_SERVICE` — service name (default: `"web"`)
  * - `DEEPTRACER_ENVIRONMENT` — environment (default: `NODE_ENV` or `"production"`)
+ * - `DEEPTRACER_LOG_LEVEL` — minimum log level to send (default: `"info"` in production, `"debug"` otherwise)
  *
  * Explicit config values override environment variables.
  *
@@ -44,6 +45,7 @@ export function init(config?: Partial<LoggerConfig>): Logger {
     service: config?.service ?? process.env.DEEPTRACER_SERVICE ?? "web",
     environment:
       config?.environment ?? process.env.DEEPTRACER_ENVIRONMENT ?? process.env.NODE_ENV ?? "production",
+    level: config?.level ?? (process.env.DEEPTRACER_LOG_LEVEL as LogLevel | undefined),
     batchSize: config?.batchSize,
     flushIntervalMs: config?.flushIntervalMs,
     debug: config?.debug,

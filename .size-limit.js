@@ -19,7 +19,7 @@ module.exports = [
   },
   {
     name: "@deeptracer/nextjs/client (ESM, gzip)",
-    path: "packages/nextjs/dist/client.js",
+    path: "packages/nextjs/dist/index.client.js",
     import: "*",
     limit: "12 KB",
     ignore: ["react", "react-dom", "next"],

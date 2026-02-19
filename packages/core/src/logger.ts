@@ -15,6 +15,14 @@ import { Batcher } from "./batcher"
 import { Transport } from "./transport"
 import { type LoggerState, createLoggerState, addBreadcrumb as addBreadcrumbToState } from "./state"
 
+/** Numeric values for log level comparison. Higher = more severe. */
+const LOG_LEVEL_VALUES: Record<LogLevel, number> = {
+  debug: 0,
+  info: 1,
+  warn: 2,
+  error: 3,
+}
+
 /** Generate a random 16-character hex ID for trace/span IDs */
 function generateId(): string {
   const bytes = new Uint8Array(8)
@@ -60,6 +68,7 @@ export const _originalConsole = {
 export class Logger {
   private batcher: Batcher
   private transport: Transport
+  private effectiveLevel: number
   protected contextName?: string
   protected config: LoggerConfig
   protected state: LoggerState
@@ -92,6 +101,9 @@ export class Logger {
         "[@deeptracer/core] No `endpoint` provided. Events will not be sent.",
       )
     }
+
+    this.effectiveLevel =
+      LOG_LEVEL_VALUES[config.level ?? (config.environment === "production" ? "info" : "debug")]
 
     this.transport = new Transport(config)
     this.batcher = new Batcher(
@@ -257,8 +269,39 @@ export class Logger {
     // Inject user, tags, contexts from shared state
     metadata = this.mergeStateMetadata(metadata)
 
+    const timestamp = new Date().toISOString()
+
+    // Debug console output fires regardless of level filter
+    if (this.config.debug) {
+      const prefix = this.contextName ? `[${this.contextName}]` : ""
+      const lvl = level.toUpperCase().padEnd(5)
+      const consoleFn =
+        level === "error"
+          ? _originalConsole.error
+          : level === "warn"
+            ? _originalConsole.warn
+            : level === "debug"
+              ? _originalConsole.debug
+              : _originalConsole.log
+      if (metadata) {
+        consoleFn(`${lvl} ${prefix} ${message}`, metadata)
+      } else {
+        consoleFn(`${lvl} ${prefix} ${message}`)
+      }
+    }
+
+    // Breadcrumbs always recorded — they provide context for error reports
+    addBreadcrumbToState(this.state, {
+      type: "log",
+      message: `[${level}] ${message}`,
+      timestamp,
+    })
+
+    // Level filter — skip batching/transport for logs below the threshold
+    if (LOG_LEVEL_VALUES[level] < this.effectiveLevel) return
+
     const entry: LogEntry = {
-      timestamp: new Date().toISOString(),
+      timestamp,
       level,
       message,
       metadata,
@@ -272,34 +315,8 @@ export class Logger {
     // Apply beforeSend hook
     const hookResult = this.applyBeforeSend({ type: "log", data: entry })
     if (hookResult === null) return
-    const finalEntry = hookResult.data as LogEntry
 
-    if (this.config.debug) {
-      const prefix = this.contextName ? `[${this.contextName}]` : ""
-      const lvl = level.toUpperCase().padEnd(5)
-      const consoleFn =
-        level === "error"
-          ? _originalConsole.error
-          : level === "warn"
-            ? _originalConsole.warn
-            : level === "debug"
-              ? _originalConsole.debug
-              : _originalConsole.log
-      if (finalEntry.metadata) {
-        consoleFn(`${lvl} ${prefix} ${message}`, finalEntry.metadata)
-      } else {
-        consoleFn(`${lvl} ${prefix} ${message}`)
-      }
-    }
-
-    // Record breadcrumb
-    addBreadcrumbToState(this.state, {
-      type: "log",
-      message: `[${level}] ${message}`,
-      timestamp: entry.timestamp,
-    })
-
-    this.batcher.add(finalEntry)
+    this.batcher.add(hookResult.data as LogEntry)
   }
 
   /** Log a debug message. */

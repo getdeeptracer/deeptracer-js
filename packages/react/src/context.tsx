@@ -135,11 +135,16 @@ export function readConfigFromEnv(): LoggerConfig | null {
 
   if (!publicKey || !endpoint) return null
 
+  const level = safeEnv("NEXT_PUBLIC_DEEPTRACER_LOG_LEVEL") as
+    | "debug" | "info" | "warn" | "error"
+    | undefined
+
   return {
     publicKey,
     endpoint,
     product: safeEnv("NEXT_PUBLIC_DEEPTRACER_PRODUCT") ?? "unknown",
     service: safeEnv("NEXT_PUBLIC_DEEPTRACER_SERVICE") ?? "web",
     environment: safeEnv("NEXT_PUBLIC_DEEPTRACER_ENVIRONMENT") ?? "production",
+    level,
   }
 }

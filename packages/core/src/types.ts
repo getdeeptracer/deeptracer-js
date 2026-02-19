@@ -44,6 +44,17 @@ export interface LoggerConfig {
   batchSize?: number
   /** Milliseconds between automatic batch flushes. Default: 5000 */
   flushIntervalMs?: number
+  /**
+   * Minimum log level to send to DeepTracer.
+   *
+   * Logs below this level are silently filtered — they won't be batched or
+   * sent to the backend. Breadcrumbs are still recorded for filtered logs
+   * (so error reports retain full context).
+   *
+   * Default: `"info"` when `environment` is `"production"`, `"debug"` otherwise.
+   * Override via `DEEPTRACER_LOG_LEVEL` (server) or `NEXT_PUBLIC_DEEPTRACER_LOG_LEVEL` (client).
+   */
+  level?: LogLevel
   /** Enable console output for all log calls (useful for local development) */
   debug?: boolean
   /** Maximum breadcrumbs to retain for error reports. Default: 20 */
