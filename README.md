@@ -13,10 +13,15 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@deeptracer/node"><img src="https://img.shields.io/npm/v/@deeptracer/node?label=%40deeptracer%2Fnode&color=blue" alt="npm" /></a>
-  <a href="https://www.npmjs.com/package/@deeptracer/ai"><img src="https://img.shields.io/npm/v/@deeptracer/ai?label=%40deeptracer%2Fai&color=blue" alt="npm" /></a>
-  <a href="https://www.npmjs.com/package/@deeptracer/core"><img src="https://img.shields.io/npm/v/@deeptracer/core?label=%40deeptracer%2Fcore&color=blue" alt="npm" /></a>
+  <a href="https://github.com/getdeeptracer/deeptracer-js/actions/workflows/ci.yml"><img src="https://github.com/getdeeptracer/deeptracer-js/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://codecov.io/gh/getdeeptracer/deeptracer-js"><img src="https://codecov.io/gh/getdeeptracer/deeptracer-js/graph/badge.svg" alt="codecov" /></a>
+  <a href="https://www.npmjs.com/package/@deeptracer/core"><img src="https://img.shields.io/npm/v/@deeptracer/core?color=blue" alt="npm" /></a>
+  <a href="https://bundlephobia.com/package/@deeptracer/core"><img src="https://img.shields.io/bundlephobia/minzip/@deeptracer/core" alt="bundle size" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.9-blue" alt="TypeScript" /></a>
+  <a href="https://github.com/getdeeptracer/deeptracer-js"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen" alt="node >= 18" /></a>
   <a href="/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
+  <a href="https://securityscorecards.dev/viewer/?uri=github.com/getdeeptracer/deeptracer-js"><img src="https://api.securityscorecards.dev/projects/github.com/getdeeptracer/deeptracer-js/badge" alt="OpenSSF Scorecard" /></a>
+  <a href="https://github.com/getdeeptracer/deeptracer-js/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs Welcome" /></a>
 </p>
 
 ---
