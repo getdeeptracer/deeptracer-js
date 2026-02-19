@@ -1,5 +1,11 @@
 import { createLogger, type Logger, type LoggerConfig, type LogLevel } from "@deeptracer/core"
 import { parseConsoleArgs } from "@deeptracer/core/internal"
+import {
+  DeepTracerSpanProcessor,
+  isAlreadyRegistered,
+  markRegistered,
+  type OtelRuntime,
+} from "./otel-processor"
 
 /**
  * Configuration for the DeepTracer Next.js integration.
@@ -17,6 +23,19 @@ export interface NextjsConfig extends Partial<LoggerConfig> {
    * Default: false (can be noisy in development)
    */
   captureConsole?: boolean
+  /**
+   * Automatically consume Next.js OpenTelemetry spans (route handlers, fetch calls,
+   * renders, middleware) and forward them to DeepTracer.
+   *
+   * When enabled, DeepTracer registers an OpenTelemetry SpanProcessor that converts
+   * all Next.js native spans into DeepTracer trace data. No per-route wrapping needed.
+   *
+   * Set to `false` if you have a custom OTel pipeline and only want manual
+   * `withRouteHandler`/`withServerAction` tracing.
+   *
+   * Default: true
+   */
+  autoTracing?: boolean
 }
 
 /**
@@ -26,7 +45,7 @@ export interface NextjsConfig extends Partial<LoggerConfig> {
 export interface InitResult {
   /**
    * Called by Next.js when the server starts.
-   * Sets up global error capture and console interception.
+   * Sets up global error capture, console interception, and OpenTelemetry span processing.
    * Re-export this from your `instrumentation.ts`.
    */
   register: () => void
@@ -120,8 +139,9 @@ export function init(config?: NextjsConfig): InitResult {
   const logger = createLogger(resolved)
   const shouldCaptureGlobalErrors = config?.captureGlobalErrors !== false
   const shouldCaptureConsole = config?.captureConsole === true
+  const shouldAutoTrace = config?.autoTracing !== false
 
-  function register(): void {
+  async function register(): Promise<void> {
     const runtime = typeof process !== "undefined" ? process.env?.NEXT_RUNTIME : undefined
 
     if (runtime === "nodejs") {
@@ -177,10 +197,15 @@ export function init(config?: NextjsConfig): InitResult {
         }
       }
 
+      if (shouldAutoTrace) {
+        await setupOtelTracing(resolved)
+      }
+
       logger.info("DeepTracer initialized", {
         runtime: "nodejs",
         product: resolved.product,
         service: resolved.service,
+        autoTracing: shouldAutoTrace,
       })
     } else if (runtime === "edge") {
       logger.info("DeepTracer initialized", {
@@ -217,4 +242,81 @@ export function init(config?: NextjsConfig): InitResult {
   }
 
   return { register, onRequestError, logger }
+}
+
+// ---------------------------------------------------------------------------
+// OTel setup — dynamic imports to avoid loading on edge runtime
+// ---------------------------------------------------------------------------
+
+async function setupOtelTracing(resolved: LoggerConfig): Promise<void> {
+  try {
+    if (isAlreadyRegistered()) return
+
+    // Dynamic imports — only executed on Node.js runtime, never edge.
+    // These packages are externalized by tsup (listed in package.json dependencies).
+    const [otelApi, otelNode, otelCore] = await Promise.all([
+      import("@opentelemetry/api"),
+      import("@opentelemetry/sdk-trace-node"),
+      import("@opentelemetry/core"),
+    ])
+
+    const otelRuntime: OtelRuntime = {
+      hrTimeToMilliseconds: otelCore.hrTimeToMilliseconds,
+      SpanStatusCode: otelApi.SpanStatusCode,
+    }
+
+    const processor = new DeepTracerSpanProcessor(
+      {
+        transportConfig: {
+          endpoint: resolved.endpoint,
+          secretKey: resolved.secretKey,
+          publicKey: resolved.publicKey,
+          product: resolved.product,
+          service: resolved.service,
+          environment: resolved.environment,
+        },
+        beforeSend: resolved.beforeSend,
+        debug: resolved.debug,
+      },
+      otelRuntime,
+    )
+
+    // Detect existing OTel provider (e.g., @vercel/otel)
+    const currentProvider = otelApi.trace.getTracerProvider()
+    const delegate = (currentProvider as { getDelegate?: () => Record<string, unknown> })
+      ?.getDelegate?.()
+    const hasExistingProvider =
+      delegate != null && delegate.constructor?.name !== "NoopTracerProvider"
+
+    if (
+      hasExistingProvider &&
+      typeof (delegate as { addSpanProcessor?: (p: unknown) => void }).addSpanProcessor ===
+        "function"
+    ) {
+      // Existing provider with addSpanProcessor (OTel SDK v1.x or compatible)
+      ;(delegate as { addSpanProcessor: (p: unknown) => void }).addSpanProcessor(processor)
+    } else {
+      // No provider or v2.x — create a new NodeTracerProvider
+      if (hasExistingProvider) {
+        console.warn(
+          "[@deeptracer/nextjs] Existing OTel provider detected but cannot add processors. " +
+            "Creating a new provider. If you need both providers, include DeepTracerSpanProcessor " +
+            "in your provider's spanProcessors array.",
+        )
+      }
+
+      const provider = new otelNode.NodeTracerProvider({
+        spanProcessors: [processor],
+      })
+      provider.register()
+    }
+
+    markRegistered()
+  } catch {
+    // Fail gracefully — logging and error capture still work without OTel
+    console.warn(
+      "[@deeptracer/nextjs] Failed to set up OpenTelemetry auto-tracing. " +
+        "Logging and error capture will still work.",
+    )
+  }
 }
