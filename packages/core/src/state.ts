@@ -1,10 +1,10 @@
 import type { User, Breadcrumb } from "./types"
 
 /**
- * Shared mutable state across a Logger and all its child loggers.
- * The root Logger creates this; `withContext()` and `forRequest()` pass
- * the same reference so mutations (setUser, addBreadcrumb, etc.) are
- * visible everywhere.
+ * Mutable state for a Logger instance.
+ * The root Logger creates this; `withContext()` and `forRequest()` clone it
+ * so each child logger gets an independent snapshot. Mutations on a child
+ * (setUser, setTags, addBreadcrumb, etc.) do not affect the parent or siblings.
  */
 export interface LoggerState {
   /** Current user context, set via setUser() */
@@ -27,6 +27,23 @@ export function createLoggerState(maxBreadcrumbs: number): LoggerState {
     contexts: {},
     breadcrumbs: [],
     maxBreadcrumbs,
+  }
+}
+
+/**
+ * Create an independent shallow clone of a LoggerState.
+ * Used by `withContext()` and `forRequest()` so child loggers
+ * don't share mutable state with the parent.
+ */
+export function cloneState(state: LoggerState): LoggerState {
+  return {
+    user: state.user ? { ...state.user } : null,
+    tags: { ...state.tags },
+    contexts: Object.fromEntries(
+      Object.entries(state.contexts).map(([k, v]) => [k, { ...v }]),
+    ),
+    breadcrumbs: [...state.breadcrumbs],
+    maxBreadcrumbs: state.maxBreadcrumbs,
   }
 }
 

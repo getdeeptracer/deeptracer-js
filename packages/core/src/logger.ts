@@ -13,7 +13,7 @@ import type {
 } from "./types"
 import { Batcher } from "./batcher"
 import { Transport } from "./transport"
-import { type LoggerState, createLoggerState, addBreadcrumb as addBreadcrumbToState } from "./state"
+import { type LoggerState, createLoggerState, cloneState, addBreadcrumb as addBreadcrumbToState } from "./state"
 
 /** Numeric values for log level comparison. Higher = more severe. */
 const LOG_LEVEL_VALUES: Record<LogLevel, number> = {
@@ -149,7 +149,8 @@ export class Logger {
 
   /**
    * Set the current user context. Attached to all subsequent logs, errors, spans, and LLM reports.
-   * Shared across all child loggers (withContext, forRequest).
+   * Only affects this logger instance — child loggers created via `withContext()` or `forRequest()`
+   * have their own independent state.
    *
    * @example
    * ```ts
@@ -372,12 +373,12 @@ export class Logger {
   // Child loggers
   // ---------------------------------------------------------------------------
 
-  /** Create a context-scoped logger. All logs include the context name. Shares state with parent. */
+  /** Create a context-scoped logger. All logs include the context name. Gets an independent copy of state. */
   withContext(name: string): Logger {
-    return new Logger(this.config, name, this.requestMeta, this.state)
+    return new Logger(this.config, name, this.requestMeta, cloneState(this.state))
   }
 
-  /** Create a request-scoped logger that extracts trace context from headers. Shares state with parent. */
+  /** Create a request-scoped logger that extracts trace context from headers. Gets an independent copy of state. */
   forRequest(request: Request): Logger {
     // Try W3C traceparent first, fall back to custom DeepTracer headers
     let traceId: string | undefined
@@ -406,7 +407,7 @@ export class Logger {
         request_id: requestId || (vercelId ? vercelId.split("::").pop() : undefined),
         vercel_id: vercelId,
       },
-      this.state,
+      cloneState(this.state),
     )
   }
 
