@@ -40,10 +40,10 @@ function detectService(): string {
   if (process.env.DEEPTRACER_SERVICE) return process.env.DEEPTRACER_SERVICE
   try {
     if (require.resolve("hono")) return "api"
-  } catch {}
+  } catch {/* not installed */}
   try {
     if (require.resolve("express")) return "api"
-  } catch {}
+  } catch {/* not installed */}
   return "server"
 }
 
