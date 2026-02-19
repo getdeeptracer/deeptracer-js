@@ -1,5 +1,6 @@
 import type { Logger } from "@deeptracer/core"
 import type { MiddlewareOptions } from "@deeptracer/core"
+import { parseTraceparent } from "@deeptracer/core/internal"
 
 /**
  * Create Hono-compatible middleware that auto-instruments every request with:
@@ -81,10 +82,23 @@ export function expressMiddleware(
       ? options.operationName(method, path)
       : `${method} ${path}`
 
-    const traceId = req.headers["x-trace-id"] || undefined
-    const spanId = req.headers["x-span-id"] || undefined
-    const requestId = req.headers["x-request-id"] || undefined
-    const vercelId = req.headers["x-vercel-id"] || undefined
+    // Try W3C traceparent first, fall back to custom DeepTracer headers
+    let traceId: string | undefined
+    let spanId: string | undefined
+
+    const traceparent = req.headers["traceparent"]
+    if (typeof traceparent === "string") {
+      const parsed = parseTraceparent(traceparent)
+      if (parsed) {
+        traceId = parsed.traceId
+        spanId = parsed.parentId
+      }
+    }
+
+    traceId = traceId || (req.headers["x-trace-id"] as string) || undefined
+    spanId = spanId || (req.headers["x-span-id"] as string) || undefined
+    const requestId = (req.headers["x-request-id"] as string) || undefined
+    const vercelId = (req.headers["x-vercel-id"] as string) || undefined
 
     const reqLogger = new (logger.constructor as any)(
       (logger as any).config,

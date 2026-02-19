@@ -1,6 +1,6 @@
 // Internal exports for sibling packages (@deeptracer/node, @deeptracer/browser)
 // NOT part of the public API — may change without notice
-export { _originalConsole, Logger } from "./logger"
+export { _originalConsole, Logger, parseTraceparent } from "./logger"
 export { Transport } from "./transport"
 export type { LoggerConfig, MiddlewareOptions } from "./types"
 export type { LoggerState } from "./state"

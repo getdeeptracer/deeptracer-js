@@ -36,6 +36,34 @@ export interface NextjsConfig extends Partial<LoggerConfig> {
    * Default: true
    */
   autoTracing?: boolean
+  /**
+   * URL patterns to propagate W3C trace context to (`traceparent` header).
+   * By default, all outgoing fetch requests receive trace headers for
+   * cross-service distributed tracing.
+   *
+   * Set this to restrict propagation to specific origins/patterns
+   * (e.g., only your own microservices, not third-party APIs).
+   *
+   * Each entry can be:
+   * - A string matched against the request origin (e.g., `"https://api.example.com"`)
+   * - A RegExp tested against the full URL
+   *
+   * Only relevant when `autoTracing` is enabled and no existing OTel provider
+   * (e.g., `@vercel/otel`) is detected.
+   *
+   * @default undefined (propagate to all URLs)
+   *
+   * @example
+   * ```ts
+   * init({
+   *   tracePropagationTargets: [
+   *     "https://api.myapp.com",
+   *     /^https:\/\/.*\.internal\.myapp\.com/,
+   *   ],
+   * })
+   * ```
+   */
+  tracePropagationTargets?: (string | RegExp)[]
 }
 
 /**
@@ -198,7 +226,7 @@ export function init(config?: NextjsConfig): InitResult {
       }
 
       if (shouldAutoTrace) {
-        await setupOtelTracing(resolved)
+        await setupOtelTracing(resolved, config?.tracePropagationTargets)
       }
 
       logger.info("DeepTracer initialized", {
@@ -248,16 +276,24 @@ export function init(config?: NextjsConfig): InitResult {
 // OTel setup — dynamic imports to avoid loading on edge runtime
 // ---------------------------------------------------------------------------
 
-async function setupOtelTracing(resolved: LoggerConfig): Promise<void> {
+async function setupOtelTracing(
+  resolved: LoggerConfig,
+  tracePropagationTargets?: (string | RegExp)[],
+): Promise<void> {
   try {
     if (isAlreadyRegistered()) return
 
+    // Disable Next.js built-in fetch OTel spans — our undici instrumentation
+    // creates richer spans with W3C traceparent propagation.
+    process.env.NEXT_OTEL_FETCH_DISABLED = "1"
+
     // Dynamic imports — only executed on Node.js runtime, never edge.
     // These packages are externalized by tsup (listed in package.json dependencies).
-    const [otelApi, otelNode, otelCore] = await Promise.all([
+    const [otelApi, otelNode, otelCore, undiciInstr] = await Promise.all([
       import("@opentelemetry/api"),
       import("@opentelemetry/sdk-trace-node"),
       import("@opentelemetry/core"),
+      import("@opentelemetry/instrumentation-undici"),
     ])
 
     const otelRuntime: OtelRuntime = {
@@ -293,7 +329,9 @@ async function setupOtelTracing(resolved: LoggerConfig): Promise<void> {
       typeof (delegate as { addSpanProcessor?: (p: unknown) => void }).addSpanProcessor ===
         "function"
     ) {
-      // Existing provider with addSpanProcessor (OTel SDK v1.x or compatible)
+      // Existing provider with addSpanProcessor — just add our processor.
+      // Skip undici instrumentation: the existing setup (e.g., @vercel/otel)
+      // likely handles fetch instrumentation already.
       ;(delegate as { addSpanProcessor: (p: unknown) => void }).addSpanProcessor(processor)
     } else {
       // No provider or v2.x — create a new NodeTracerProvider
@@ -309,6 +347,28 @@ async function setupOtelTracing(resolved: LoggerConfig): Promise<void> {
         spanProcessors: [processor],
       })
       provider.register()
+
+      // Register undici instrumentation for automatic fetch tracing with
+      // W3C traceparent propagation. Must be constructed AFTER provider.register()
+      // since it reads from the global TracerProvider on construction.
+      const ingestOrigin = new URL(resolved.endpoint!).origin
+
+      new undiciInstr.UndiciInstrumentation({
+        ignoreRequestHook: (request: { origin: string; path: string }) => {
+          // Exclude DeepTracer's own ingestion endpoint (prevent circular tracing)
+          if (request.origin === ingestOrigin) return true
+          // If user specified targets, only propagate to those
+          if (tracePropagationTargets && tracePropagationTargets.length > 0) {
+            const fullUrl = `${request.origin}${request.path}`
+            return !tracePropagationTargets.some((target) =>
+              typeof target === "string"
+                ? request.origin === target || request.origin.startsWith(target)
+                : target.test(fullUrl),
+            )
+          }
+          return false
+        },
+      })
     }
 
     markRegistered()

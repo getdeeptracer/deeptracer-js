@@ -23,11 +23,40 @@ const LOG_LEVEL_VALUES: Record<LogLevel, number> = {
   error: 3,
 }
 
-/** Generate a random 16-character hex ID for trace/span IDs */
+/** Generate a random 16-character hex ID for span IDs */
 function generateId(): string {
   const bytes = new Uint8Array(8)
   crypto.getRandomValues(bytes)
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")
+}
+
+/** Generate a random 32-character hex ID for W3C-compatible trace IDs */
+function generateTraceId(): string {
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")
+}
+
+/**
+ * Parse a W3C traceparent header.
+ * Format: `{version}-{trace-id}-{parent-id}-{trace-flags}`
+ * Example: `00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01`
+ *
+ * @returns Parsed components or `null` if the header is invalid.
+ */
+export function parseTraceparent(
+  header: string,
+): { traceId: string; parentId: string; flags: string } | null {
+  const parts = header.trim().split("-")
+  if (parts.length !== 4) return null
+  const [version, traceId, parentId, flags] = parts
+  if (version !== "00") return null
+  if (traceId.length !== 32 || !/^[0-9a-f]{32}$/.test(traceId)) return null
+  if (parentId.length !== 16 || !/^[0-9a-f]{16}$/.test(parentId)) return null
+  if (flags.length !== 2 || !/^[0-9a-f]{2}$/.test(flags)) return null
+  // All-zero trace-id or parent-id are invalid per W3C spec
+  if (/^0+$/.test(traceId) || /^0+$/.test(parentId)) return null
+  return { traceId, parentId, flags }
 }
 
 /**
@@ -350,10 +379,23 @@ export class Logger {
 
   /** Create a request-scoped logger that extracts trace context from headers. Shares state with parent. */
   forRequest(request: Request): Logger {
-    const vercelId = request.headers.get("x-vercel-id") || undefined
+    // Try W3C traceparent first, fall back to custom DeepTracer headers
+    let traceId: string | undefined
+    let spanId: string | undefined
+
+    const traceparent = request.headers.get("traceparent")
+    if (traceparent) {
+      const parsed = parseTraceparent(traceparent)
+      if (parsed) {
+        traceId = parsed.traceId
+        spanId = parsed.parentId
+      }
+    }
+
+    traceId = traceId || request.headers.get("x-trace-id") || undefined
+    spanId = spanId || request.headers.get("x-span-id") || undefined
     const requestId = request.headers.get("x-request-id") || undefined
-    const traceId = request.headers.get("x-trace-id") || undefined
-    const spanId = request.headers.get("x-span-id") || undefined
+    const vercelId = request.headers.get("x-vercel-id") || undefined
 
     return new Logger(
       this.config,
@@ -495,7 +537,7 @@ export class Logger {
 
   /** Start a span with manual lifecycle. You must call span.end(). */
   startInactiveSpan(operation: string): InactiveSpan {
-    const traceId = this.requestMeta?.trace_id || generateId()
+    const traceId = this.requestMeta?.trace_id || generateTraceId()
     const parentSpanId = this.requestMeta?.span_id || ""
     const spanId = generateId()
     const startTime = new Date().toISOString()
@@ -540,10 +582,17 @@ export class Logger {
         const childLogger = new Logger(this.config, this.contextName, childMeta, this.state)
         return childLogger.startInactiveSpan(childOp)
       },
-      getHeaders: () => ({
-        "x-trace-id": traceId,
-        "x-span-id": spanId,
-      }),
+      getHeaders: () => {
+        const headers: Record<string, string> = {
+          "x-trace-id": traceId,
+          "x-span-id": spanId,
+        }
+        // Emit W3C traceparent if trace ID is valid 32-hex format
+        if (/^[0-9a-f]{32}$/.test(traceId)) {
+          headers.traceparent = `00-${traceId}-${spanId}-01`
+        }
+        return headers
+      },
     }
 
     return span

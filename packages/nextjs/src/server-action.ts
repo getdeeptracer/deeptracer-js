@@ -7,13 +7,13 @@ import type { Logger } from "@deeptracer/core"
  * The original error is always re-thrown so Next.js error handling works normally.
  *
  * @param logger - DeepTracer Logger instance (from `init().logger`)
- * @param name - A descriptive name for the action (e.g., "createUser", "submitForm")
+ * @param name - A descriptive name for the action. Optional — if omitted, inferred from `fn.name`.
  * @param fn - The async function to execute
  * @returns The result of the server action function
  *
  * @example
+ * With explicit name:
  * ```ts
- * // app/actions.ts
  * "use server"
  * import { withServerAction } from "@deeptracer/nextjs"
  * import { logger } from "@/instrumentation"
@@ -21,17 +21,34 @@ import type { Logger } from "@deeptracer/core"
  * export async function createUser(formData: FormData) {
  *   return withServerAction(logger, "createUser", async () => {
  *     const name = formData.get("name") as string
- *     const user = await db.user.create({ data: { name } })
- *     return user
+ *     return await db.user.create({ data: { name } })
+ *   })
+ * }
+ * ```
+ *
+ * @example
+ * With inferred name (uses `fn.name`):
+ * ```ts
+ * "use server"
+ * export async function createUser(formData: FormData) {
+ *   return withServerAction(logger, async function createUser() {
+ *     const name = formData.get("name") as string
+ *     return await db.user.create({ data: { name } })
  *   })
  * }
  * ```
  */
 export async function withServerAction<T>(
   logger: Logger,
-  name: string,
-  fn: () => Promise<T>,
+  nameOrFn: string | (() => Promise<T>),
+  maybeFn?: () => Promise<T>,
 ): Promise<T> {
+  const name =
+    typeof nameOrFn === "string"
+      ? nameOrFn
+      : nameOrFn.name || "anonymous"
+  const fn = typeof nameOrFn === "string" ? maybeFn! : nameOrFn
+
   return logger.startSpan(`server-action:${name}`, async () => {
     try {
       return await fn()
