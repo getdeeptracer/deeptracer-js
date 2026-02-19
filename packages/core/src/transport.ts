@@ -16,7 +16,7 @@ export class Transport {
   constructor(
     private config: Pick<
       LoggerConfig,
-      "endpoint" | "secretKey" | "publicKey" | "product" | "service" | "environment"
+      "endpoint" | "secretKey" | "publicKey" | "service" | "environment"
     >,
   ) {
     // Loud warning if a secret key is used in a browser context
@@ -111,7 +111,6 @@ export class Transport {
     const p = this.sendWithRetry(
       `${this.config.endpoint}/ingest/logs`,
       {
-        product: this.config.product,
         service: this.config.service,
         environment: this.config.environment,
         logs,
@@ -127,7 +126,6 @@ export class Transport {
       `${this.config.endpoint}/ingest/errors`,
       {
         ...error,
-        product: this.config.product,
         service: this.config.service,
         environment: this.config.environment,
       },
@@ -142,7 +140,6 @@ export class Transport {
       `${this.config.endpoint}/ingest/traces`,
       {
         ...span,
-        product: this.config.product,
         service: this.config.service,
         environment: this.config.environment,
       },
@@ -166,7 +163,6 @@ export class Transport {
       `${this.config.endpoint}/ingest/llm`,
       {
         ...report,
-        product: this.config.product,
         service: this.config.service,
         environment: this.config.environment,
       },

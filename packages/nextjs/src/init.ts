@@ -108,8 +108,7 @@ export interface InitResult {
  * All config fields are optional — reads from environment variables:
  * - `DEEPTRACER_SECRET_KEY` — server API key (`dt_secret_...`)
  * - `DEEPTRACER_ENDPOINT` — ingestion API URL
- * - `DEEPTRACER_PRODUCT` — product name (default: `"unknown"`)
- * - `DEEPTRACER_SERVICE` — service name (default: `"web"`)
+ * - `DEEPTRACER_SERVICE` — service name (default: `"nextjs"`)
  * - `DEEPTRACER_ENVIRONMENT` — environment (default: `NODE_ENV` or `"production"`)
  * - `DEEPTRACER_LOG_LEVEL` — minimum log level to send (default: `"info"` in production, `"debug"` otherwise)
  *
@@ -133,7 +132,6 @@ export interface InitResult {
  * export const { register, onRequestError } = init({
  *   secretKey: process.env.DEEPTRACER_SECRET_KEY!,
  *   endpoint: "https://deeptracer.example.com",
- *   product: "my-app",
  * })
  * ```
  */
@@ -141,8 +139,7 @@ export function init(config?: NextjsConfig): InitResult {
   const resolved: LoggerConfig = {
     secretKey: config?.secretKey ?? process.env.DEEPTRACER_SECRET_KEY,
     endpoint: config?.endpoint ?? process.env.DEEPTRACER_ENDPOINT,
-    product: config?.product ?? process.env.DEEPTRACER_PRODUCT ?? "unknown",
-    service: config?.service ?? process.env.DEEPTRACER_SERVICE ?? "web",
+    service: config?.service ?? process.env.DEEPTRACER_SERVICE ?? "nextjs",
     environment:
       config?.environment ?? process.env.DEEPTRACER_ENVIRONMENT ?? process.env.NODE_ENV ?? "production",
     level: config?.level ?? (process.env.DEEPTRACER_LOG_LEVEL as LogLevel | undefined),
@@ -231,14 +228,12 @@ export function init(config?: NextjsConfig): InitResult {
 
       logger.info("DeepTracer initialized", {
         runtime: "nodejs",
-        product: resolved.product,
         service: resolved.service,
         autoTracing: shouldAutoTrace,
       })
     } else if (runtime === "edge") {
       logger.info("DeepTracer initialized", {
         runtime: "edge",
-        product: resolved.product,
         service: resolved.service,
       })
     }
@@ -307,7 +302,6 @@ async function setupOtelTracing(
           endpoint: resolved.endpoint,
           secretKey: resolved.secretKey,
           publicKey: resolved.publicKey,
-          product: resolved.product,
           service: resolved.service,
           environment: resolved.environment,
         },

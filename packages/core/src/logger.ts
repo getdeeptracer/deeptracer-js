@@ -84,7 +84,6 @@ export const _originalConsole = {
  * const logger = createLogger({
  *   secretKey: "dt_secret_xxx",
  *   endpoint: "https://deeptracer.example.com",
- *   product: "my-app",
  *   service: "api",
  *   environment: "production",
  * })

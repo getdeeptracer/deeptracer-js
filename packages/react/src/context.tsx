@@ -28,7 +28,6 @@ export interface DeepTracerProviderProps {
    * <DeepTracerProvider config={{
    *   publicKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY!,
    *   endpoint: process.env.NEXT_PUBLIC_DEEPTRACER_ENDPOINT!,
-   *   product: "my-app",
    * }}>
    * ```
    */
@@ -65,7 +64,6 @@ export interface DeepTracerProviderProps {
  *     <DeepTracerProvider config={{
  *       publicKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY!,
  *       endpoint: process.env.NEXT_PUBLIC_DEEPTRACER_ENDPOINT!,
- *       product: "my-app",
  *     }}>
  *       {children}
  *     </DeepTracerProvider>
@@ -142,7 +140,6 @@ export function readConfigFromEnv(): LoggerConfig | null {
   return {
     publicKey,
     endpoint,
-    product: safeEnv("NEXT_PUBLIC_DEEPTRACER_PRODUCT") ?? "unknown",
     service: safeEnv("NEXT_PUBLIC_DEEPTRACER_SERVICE") ?? "web",
     environment: safeEnv("NEXT_PUBLIC_DEEPTRACER_ENVIRONMENT") ?? "production",
     level,

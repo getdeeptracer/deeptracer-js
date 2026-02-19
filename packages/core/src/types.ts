@@ -11,7 +11,6 @@
  * const config: LoggerConfig = {
  *   secretKey: "dt_secret_xxx",
  *   endpoint: "https://deeptracer.example.com",
- *   product: "my-app",
  *   service: "api",
  *   environment: "production",
  * }
@@ -23,7 +22,6 @@
  * const config: LoggerConfig = {
  *   publicKey: "dt_public_xxx",
  *   endpoint: "https://deeptracer.example.com",
- *   product: "my-app",
  * }
  * ```
  */
@@ -32,11 +30,9 @@ export interface LoggerConfig {
   secretKey?: string
   /** Client-side API key (prefix: `dt_public_`). Safe for browser bundles. */
   publicKey?: string
-  /** Product name (e.g., "spotbeam", "macro"). Default: `"unknown"` */
-  product?: string
-  /** Service name (e.g., "api", "worker", "web"). Default: `"web"` */
+  /** Service name (e.g., "api", "worker", "web"). Default varies by package. */
   service?: string
-  /** Deployment environment (e.g., "production", "staging", "development"). Default: `NODE_ENV` or `"production"` */
+  /** Deployment environment (any string). Default: `NODE_ENV` or `"production"` */
   environment?: string
   /** DeepTracer ingestion endpoint URL */
   endpoint?: string

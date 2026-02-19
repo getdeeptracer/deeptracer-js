@@ -30,12 +30,23 @@ core (zero dependencies)
 ```bash
 npm run build          # Build all packages (in dependency order)
 npm run clean          # Remove all dist/ folders
+npm test               # Run all tests (once)
+npm run test:watch     # Run tests in watch mode
+npm run test:coverage  # Run tests with coverage report
 npm run typecheck      # Type-check all packages
 npm run lint           # ESLint across all packages
 npm run format:check   # Prettier format check
 npm run format         # Prettier auto-fix
 npm run size           # Check bundle size budgets
 ```
+
+## Testing
+
+- **Runner**: Vitest (v4) with workspace projects
+- **Test location**: `packages/*/src/__tests__/*.test.ts` (co-located with source)
+- **Run single package**: `npx vitest run --project core`
+- **Coverage**: V8 provider via `npm run test:coverage`, reports in `./coverage/`
+- **Mocking**: Mock `globalThis.fetch` for transport tests, `vi.useFakeTimers()` for batcher tests
 
 ## Build System
 
@@ -54,13 +65,27 @@ npm run size           # Check bundle size budgets
 - React package has `"use client"` banner in tsup output
 - Next.js package has two entry points: main (server) and `./client` (React re-exports)
 
-## Version Bumping
+## Releasing
 
-When releasing, update ALL of these:
-1. `packages/core/src/version.ts` — `SDK_VERSION` constant
-2. Root `package.json` — `version` field
-3. All 6 `packages/*/package.json` — `version` field
-4. All internal `@deeptracer/*` dependency versions in package.json files
+This repo uses [@changesets/cli](https://github.com/changesets/changesets) with **lockstep versioning** — all 6 packages always share the same version.
+
+**Adding a changeset (during development):**
+```bash
+npx changeset        # interactive — pick packages + bump type + summary
+```
+
+**How releases work:**
+1. Changesets accumulate in `.changeset/` as PRs merge to `main`
+2. A GitHub Action creates a "Version Packages" PR (bumps versions + generates changelogs)
+3. Merging that PR triggers `npm publish` with provenance for all packages
+
+**Manual release (if needed):**
+```bash
+npm run version      # changeset version + sync version.ts
+npm run release      # build all + changeset publish
+```
+
+**Setup required:** Configure [npm Trusted Publishing](https://docs.npmjs.com/generating-provenance-statements#publishing-packages-with-provenance-via-github-actions) for all 6 `@deeptracer/*` packages (no token needed — uses GitHub OIDC)
 
 ## Key Files
 
