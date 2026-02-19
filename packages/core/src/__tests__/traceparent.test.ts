@@ -26,7 +26,9 @@ describe("parseTraceparent", () => {
   })
 
   it("rejects too many parts", () => {
-    expect(parseTraceparent("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01-extra")).toBeNull()
+    expect(
+      parseTraceparent("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01-extra"),
+    ).toBeNull()
   })
 
   it("rejects trace-id with wrong length", () => {

@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { Transport } from "../transport"
 import type { LogEntry } from "../types"
 
-function createTransport(overrides?: Partial<{ endpoint: string; secretKey: string; publicKey: string }>) {
+function createTransport(
+  overrides?: Partial<{ endpoint: string; secretKey: string; publicKey: string }>,
+) {
   return new Transport({
     endpoint: "https://test.deeptracer.dev",
     secretKey: "dt_secret_test",
@@ -213,9 +215,10 @@ describe("Transport", () => {
       vi.stubGlobal(
         "fetch",
         vi.fn(
-          () => new Promise<Response>((resolve) => {
-            resolveRequest = () => resolve(new Response(null, { status: 200 }))
-          }),
+          () =>
+            new Promise<Response>((resolve) => {
+              resolveRequest = () => resolve(new Response(null, { status: 200 }))
+            }),
         ),
       )
 

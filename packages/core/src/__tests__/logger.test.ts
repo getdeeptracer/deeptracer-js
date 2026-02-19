@@ -66,7 +66,9 @@ describe("Logger", () => {
 
       const errorCall = fetchMock.calls.find((c) => c.url.includes("/ingest/errors"))
       expect(errorCall).toBeDefined()
-      expect(errorCall!.body.breadcrumbs.some((b: any) => b.message.includes("breadcrumb only"))).toBe(true)
+      expect(
+        errorCall!.body.breadcrumbs.some((b: any) => b.message.includes("breadcrumb only")),
+      ).toBe(true)
 
       await logger.destroy()
     })

@@ -141,7 +141,10 @@ export function init(config?: NextjsConfig): InitResult {
     endpoint: config?.endpoint ?? process.env.DEEPTRACER_ENDPOINT,
     service: config?.service ?? process.env.DEEPTRACER_SERVICE ?? "nextjs",
     environment:
-      config?.environment ?? process.env.DEEPTRACER_ENVIRONMENT ?? process.env.NODE_ENV ?? "production",
+      config?.environment ??
+      process.env.DEEPTRACER_ENVIRONMENT ??
+      process.env.NODE_ENV ??
+      "production",
     level: config?.level ?? (process.env.DEEPTRACER_LOG_LEVEL as LogLevel | undefined),
     batchSize: config?.batchSize,
     flushIntervalMs: config?.flushIntervalMs,
@@ -313,8 +316,9 @@ async function setupOtelTracing(
 
     // Detect existing OTel provider (e.g., @vercel/otel)
     const currentProvider = otelApi.trace.getTracerProvider()
-    const delegate = (currentProvider as { getDelegate?: () => Record<string, unknown> })
-      ?.getDelegate?.()
+    const delegate = (
+      currentProvider as { getDelegate?: () => Record<string, unknown> }
+    )?.getDelegate?.()
     const hasExistingProvider =
       delegate != null && delegate.constructor?.name !== "NoopTracerProvider"
 

@@ -39,9 +39,7 @@ export function cloneState(state: LoggerState): LoggerState {
   return {
     user: state.user ? { ...state.user } : null,
     tags: { ...state.tags },
-    contexts: Object.fromEntries(
-      Object.entries(state.contexts).map(([k, v]) => [k, { ...v }]),
-    ),
+    contexts: Object.fromEntries(Object.entries(state.contexts).map(([k, v]) => [k, { ...v }])),
     breadcrumbs: [...state.breadcrumbs],
     maxBreadcrumbs: state.maxBreadcrumbs,
   }

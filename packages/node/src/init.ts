@@ -40,10 +40,14 @@ function detectService(): string {
   if (process.env.DEEPTRACER_SERVICE) return process.env.DEEPTRACER_SERVICE
   try {
     if (require.resolve("hono")) return "api"
-  } catch {/* not installed */}
+  } catch {
+    /* not installed */
+  }
   try {
     if (require.resolve("express")) return "api"
-  } catch {/* not installed */}
+  } catch {
+    /* not installed */
+  }
   return "server"
 }
 
@@ -53,7 +57,10 @@ export function init(config?: Partial<LoggerConfig>): Logger {
     endpoint: config?.endpoint ?? process.env.DEEPTRACER_ENDPOINT,
     service: config?.service ?? detectService(),
     environment:
-      config?.environment ?? process.env.DEEPTRACER_ENVIRONMENT ?? process.env.NODE_ENV ?? "production",
+      config?.environment ??
+      process.env.DEEPTRACER_ENVIRONMENT ??
+      process.env.NODE_ENV ??
+      "production",
     level: config?.level ?? (process.env.DEEPTRACER_LOG_LEVEL as LogLevel | undefined),
     batchSize: config?.batchSize,
     flushIntervalMs: config?.flushIntervalMs,

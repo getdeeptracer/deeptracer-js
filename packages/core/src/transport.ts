@@ -20,10 +20,7 @@ export class Transport {
     >,
   ) {
     // Loud warning if a secret key is used in a browser context
-    if (
-      config.secretKey?.startsWith("dt_secret_") &&
-      typeof globalThis.window !== "undefined"
-    ) {
+    if (config.secretKey?.startsWith("dt_secret_") && typeof globalThis.window !== "undefined") {
       console.error(
         "[@deeptracer/core] WARNING: `secretKey` (dt_secret_...) detected in a browser bundle. " +
           "This exposes your server key to end users. Use `publicKey` (dt_public_...) for client-side code.",

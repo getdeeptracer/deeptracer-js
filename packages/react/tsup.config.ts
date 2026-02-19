@@ -7,10 +7,7 @@ export default defineConfig({
   dts: { compilerOptions: { composite: false } },
   clean: true,
   target: "es2022",
-  external: [
-    ...Object.keys(pkg.dependencies ?? {}),
-    ...Object.keys(pkg.peerDependencies ?? {}),
-  ],
+  external: [...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.peerDependencies ?? {})],
   esbuildOptions(options) {
     options.jsx = "automatic"
   },

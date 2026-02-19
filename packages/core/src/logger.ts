@@ -13,7 +13,12 @@ import type {
 } from "./types"
 import { Batcher } from "./batcher"
 import { Transport } from "./transport"
-import { type LoggerState, createLoggerState, cloneState, addBreadcrumb as addBreadcrumbToState } from "./state"
+import {
+  type LoggerState,
+  createLoggerState,
+  cloneState,
+  addBreadcrumb as addBreadcrumbToState,
+} from "./state"
 
 /** Numeric values for log level comparison. Higher = more severe. */
 const LOG_LEVEL_VALUES: Record<LogLevel, number> = {
@@ -125,9 +130,7 @@ export class Logger {
       )
     }
     if (!config.endpoint) {
-      _originalConsole.error(
-        "[@deeptracer/core] No `endpoint` provided. Events will not be sent.",
-      )
+      _originalConsole.error("[@deeptracer/core] No `endpoint` provided. Events will not be sent.")
     }
 
     this.effectiveLevel =

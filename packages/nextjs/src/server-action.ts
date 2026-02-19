@@ -43,10 +43,7 @@ export async function withServerAction<T>(
   nameOrFn: string | (() => Promise<T>),
   maybeFn?: () => Promise<T>,
 ): Promise<T> {
-  const name =
-    typeof nameOrFn === "string"
-      ? nameOrFn
-      : nameOrFn.name || "anonymous"
+  const name = typeof nameOrFn === "string" ? nameOrFn : nameOrFn.name || "anonymous"
   const fn = typeof nameOrFn === "string" ? maybeFn! : nameOrFn
 
   return logger.startSpan(`server-action:${name}`, async () => {
