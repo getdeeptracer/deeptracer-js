@@ -1,7 +1,7 @@
 {
   "name": "deeptracer-js",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "DeepTracer JavaScript SDK — multi-package observability toolkit",
   "workspaces": [
     "packages/*"

@@ -32,8 +32,21 @@
     "directory": "packages/ai"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@deeptracer/core": "0.4.1"
+  },
+  "peerDependencies": {
+    "ai": ">=3",
+    "openai": ">=4",
+    "@anthropic-ai/sdk": ">=0.20"
+  },
+  "peerDependenciesMeta": {
+    "ai": { "optional": true },
+    "openai": { "optional": true },
+    "@anthropic-ai/sdk": { "optional": true }
   },
   "scripts": {
     "build": "tsup",

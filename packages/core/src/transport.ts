@@ -9,9 +9,28 @@ import { SDK_VERSION, SDK_NAME } from "./version"
  * - Only retries on network errors and 5xx (not 4xx client errors)
  * - SDK version header on every request (`x-deeptracer-sdk: core/0.3.0`)
  * - In-flight request tracking for graceful shutdown via `drain()`
+ * - Silent no-op when no API key or endpoint is configured (no retries, no console noise)
+ * - Warn-once per failure type — first failure for each send type (logs, error, trace)
+ *   logs a warning, subsequent identical failures are silently dropped
  */
 export class Transport {
   private inFlightRequests = new Set<Promise<void>>()
+
+  /**
+   * When true, all send methods become silent no-ops.
+   * Set automatically when no auth key or no endpoint is configured.
+   * This prevents pointless network requests and console noise during
+   * local development without API keys.
+   */
+  private readonly disabled: boolean
+
+  /**
+   * Tracks which send types (logs, error, trace, LLM usage) have already
+   * logged a failure warning. After the first failure for a given type,
+   * subsequent failures are silently dropped to prevent console spam
+   * (e.g., when the ingestion endpoint is unreachable during development).
+   */
+  private warnedLabels = new Set<string>()
 
   constructor(
     private config: Pick<
@@ -19,6 +38,10 @@ export class Transport {
       "endpoint" | "secretKey" | "publicKey" | "service" | "environment"
     >,
   ) {
+    const hasKey = !!(config.secretKey || config.publicKey)
+    const hasEndpoint = !!config.endpoint
+    this.disabled = !hasKey || !hasEndpoint
+
     // Loud warning if a secret key is used in a browser context
     if (config.secretKey?.startsWith("dt_secret_") && typeof globalThis.window !== "undefined") {
       console.error(
@@ -37,6 +60,9 @@ export class Transport {
    * Send a request with automatic retry and exponential backoff.
    * Retries up to `maxRetries` times on network errors and 5xx responses.
    * Does NOT retry on 4xx (client errors — bad payload, auth failure, etc.).
+   *
+   * After the first total failure for a given label, subsequent failures
+   * are silently dropped (no more console warnings).
    */
   private async sendWithRetry(
     url: string,
@@ -44,6 +70,8 @@ export class Transport {
     label: string,
     maxRetries = 3,
   ): Promise<void> {
+    if (this.disabled) return
+
     const baseDelays = [1000, 2000, 4000]
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -58,13 +86,21 @@ export class Transport {
           body: JSON.stringify(body),
         })
 
-        if (res.ok) return
+        if (res.ok) {
+          // Successful send — clear any previous warning for this label
+          // so future failures will warn again (endpoint recovered).
+          this.warnedLabels.delete(label)
+          return
+        }
 
         // 4xx: client error, do not retry
         if (res.status >= 400 && res.status < 500) {
-          console.warn(
-            `[@deeptracer/core] Failed to send ${label}: ${res.status} ${res.statusText}`,
-          )
+          if (!this.warnedLabels.has(label)) {
+            this.warnedLabels.add(label)
+            console.warn(
+              `[@deeptracer/core] Failed to send ${label}: ${res.status} ${res.statusText}`,
+            )
+          }
           return
         }
 
@@ -74,16 +110,24 @@ export class Transport {
           continue
         }
 
-        console.warn(
-          `[@deeptracer/core] Failed to send ${label}: ${res.status} ${res.statusText} (exhausted ${maxRetries} retries)`,
-        )
+        if (!this.warnedLabels.has(label)) {
+          this.warnedLabels.add(label)
+          console.warn(
+            `[@deeptracer/core] Failed to send ${label}: ${res.status} ${res.statusText} (exhausted ${maxRetries} retries). Suppressing further warnings.`,
+          )
+        }
       } catch {
         // Network error, retry if attempts remain
         if (attempt < maxRetries) {
           await this.sleep(this.jitter(baseDelays[attempt]))
           continue
         }
-        console.warn(`[@deeptracer/core] Failed to send ${label} (exhausted ${maxRetries} retries)`)
+        if (!this.warnedLabels.has(label)) {
+          this.warnedLabels.add(label)
+          console.warn(
+            `[@deeptracer/core] Failed to send ${label} (exhausted ${maxRetries} retries). Suppressing further warnings.`,
+          )
+        }
       }
     }
   }

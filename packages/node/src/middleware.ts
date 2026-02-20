@@ -1,6 +1,5 @@
 import type { Logger } from "@deeptracer/core"
 import type { MiddlewareOptions } from "@deeptracer/core"
-import { parseTraceparent } from "@deeptracer/core/internal"
 
 /**
  * Create Hono-compatible middleware that auto-instruments every request with:
@@ -82,34 +81,17 @@ export function expressMiddleware(
       ? options.operationName(method, path)
       : `${method} ${path}`
 
-    // Try W3C traceparent first, fall back to custom DeepTracer headers
-    let traceId: string | undefined
-    let spanId: string | undefined
-
-    const traceparent = req.headers["traceparent"]
-    if (typeof traceparent === "string") {
-      const parsed = parseTraceparent(traceparent)
-      if (parsed) {
-        traceId = parsed.traceId
-        spanId = parsed.parentId
-      }
+    // Build a Request-like object for forRequest() to extract trace context
+    const headers = new Headers()
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (typeof value === "string") headers.set(key, value)
+      else if (Array.isArray(value)) value.forEach((v) => headers.append(key, v))
     }
-
-    traceId = traceId || (req.headers["x-trace-id"] as string) || undefined
-    spanId = spanId || (req.headers["x-span-id"] as string) || undefined
-    const requestId = (req.headers["x-request-id"] as string) || undefined
-    const vercelId = (req.headers["x-vercel-id"] as string) || undefined
-
-    const reqLogger = new (logger.constructor as any)(
-      (logger as any).config,
-      (logger as any).contextName,
-      {
-        trace_id: traceId,
-        span_id: spanId,
-        request_id: requestId || (vercelId ? vercelId.split("::").pop() : undefined),
-        vercel_id: vercelId,
-      },
-      (logger as any).state,
+    const reqLogger = logger.forRequest(
+      new Request(`http://${req.headers.host || "localhost"}${req.url}`, {
+        method: req.method,
+        headers,
+      }),
     )
 
     const span = reqLogger.startInactiveSpan(opName)

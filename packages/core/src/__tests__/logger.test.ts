@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { createLogger } from "../logger"
+import { createLogger, _originalConsole } from "../logger"
 import { testConfig, mockFetch } from "./helpers"
 
 describe("Logger", () => {
@@ -328,6 +328,77 @@ describe("Logger", () => {
       expect(logCall!.body.logs[0].metadata?._contexts).toBeUndefined()
 
       await logger.destroy()
+    })
+  })
+
+  describe("local-only mode", () => {
+    // Logger uses _originalConsole.warn (not console.warn) to avoid
+    // infinite loops when captureConsole is active. Spy on that instead.
+
+    it("warns once when no key and no endpoint configured", () => {
+      const warnSpy = vi.spyOn(_originalConsole, "warn").mockImplementation(() => {})
+      createLogger({ service: "test", environment: "test" } as any)
+
+      const warnings = warnSpy.mock.calls.filter(
+        (args) => typeof args[0] === "string" && args[0].includes("local-only mode"),
+      )
+      expect(warnings).toHaveLength(1)
+      expect(warnings[0][0]).toContain("DEEPTRACER_SECRET_KEY")
+
+      warnSpy.mockRestore()
+    })
+
+    it("warns when no key but endpoint is configured", () => {
+      const warnSpy = vi.spyOn(_originalConsole, "warn").mockImplementation(() => {})
+      createLogger({ endpoint: "https://test.dev", service: "test", environment: "test" } as any)
+
+      const warnings = warnSpy.mock.calls.filter(
+        (args) => typeof args[0] === "string" && args[0].includes("No `secretKey`"),
+      )
+      expect(warnings).toHaveLength(1)
+
+      warnSpy.mockRestore()
+    })
+
+    it("warns when key but no endpoint configured", () => {
+      const warnSpy = vi.spyOn(_originalConsole, "warn").mockImplementation(() => {})
+      createLogger({ secretKey: "dt_secret_test", service: "test", environment: "test" } as any)
+
+      const warnings = warnSpy.mock.calls.filter(
+        (args) => typeof args[0] === "string" && args[0].includes("No `endpoint`"),
+      )
+      expect(warnings).toHaveLength(1)
+
+      warnSpy.mockRestore()
+    })
+
+    it("does not warn when both key and endpoint are configured", () => {
+      const warnSpy = vi.spyOn(_originalConsole, "warn").mockImplementation(() => {})
+      createLogger(testConfig())
+
+      const warnings = warnSpy.mock.calls.filter(
+        (args) =>
+          typeof args[0] === "string" &&
+          (args[0].includes("local-only") ||
+            args[0].includes("No `secretKey`") ||
+            args[0].includes("No `endpoint`")),
+      )
+      expect(warnings).toHaveLength(0)
+
+      warnSpy.mockRestore()
+    })
+
+    it("does not send events in local-only mode", async () => {
+      const warnSpy = vi.spyOn(_originalConsole, "warn").mockImplementation(() => {})
+      const logger = createLogger({ service: "test", environment: "test" } as any)
+      logger.info("this should not be sent")
+      logger.captureError(new Error("test"), { severity: "high" })
+      await flushAll()
+
+      expect(fetchMock.mock).not.toHaveBeenCalled()
+
+      await logger.destroy()
+      warnSpy.mockRestore()
     })
   })
 })

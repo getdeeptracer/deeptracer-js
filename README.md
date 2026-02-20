@@ -53,11 +53,10 @@ import { openai } from "@ai-sdk/openai"
 
 // 1. Initialize — creates logger + captures uncaught errors
 const logger = init({
-  product: "my-app",
   service: "api",
   environment: "production",
   endpoint: "https://your-deeptracer.com",
-  apiKey: "dt_live_xxx",
+  secretKey: "dt_secret_xxx",
 })
 
 // 2. Add middleware to your framework
@@ -82,11 +81,10 @@ npm install @deeptracer/nextjs
 import { init } from "@deeptracer/nextjs"
 
 export const { register, onRequestError } = init({
-  product: "my-app",
   service: "web",
   environment: "production",
   endpoint: "https://your-deeptracer.com",
-  apiKey: process.env.DEEPTRACER_API_KEY!,
+  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
 })
 ```
 
@@ -127,37 +125,47 @@ Copy-paste these prompts into Cursor, Claude Code, Copilot, or any AI coding ass
 ```
 Install @deeptracer/nextjs and set up full observability for my Next.js app.
 
-Server-side: Create instrumentation.ts in the project root with:
+Step 1 — Install:
+npm install @deeptracer/nextjs
+
+Step 2 — Environment variables in .env.local:
+DEEPTRACER_SECRET_KEY=dt_secret_xxx
+DEEPTRACER_ENDPOINT=https://your-deeptracer.example.com
+NEXT_PUBLIC_DEEPTRACER_KEY=dt_public_xxx
+NEXT_PUBLIC_DEEPTRACER_ENDPOINT=https://your-deeptracer.example.com
+
+Step 3 — Create instrumentation.ts in the project root:
 
 import { init } from "@deeptracer/nextjs"
 
-export const { register, onRequestError } = init({
-  product: "<PRODUCT_NAME>",
-  service: "web",
-  environment: "production",
-  endpoint: "<DEEPTRACER_ENDPOINT>",
-  apiKey: process.env.DEEPTRACER_API_KEY!,
-})
+const deeptracer = init({ service: "web" })
 
-Client-side: Add DeepTracerProvider to app/layout.tsx:
+export const { register, onRequestError } = deeptracer
+export const logger = deeptracer.logger
+
+Step 4 — Add DeepTracerProvider to app/layout.tsx (zero-config, reads env vars):
 
 import { DeepTracerProvider } from "@deeptracer/nextjs/client"
 
 Wrap {children} with:
-<DeepTracerProvider config={{
-  product: "<PRODUCT_NAME>",
-  service: "web",
-  environment: "production",
-  endpoint: process.env.NEXT_PUBLIC_DEEPTRACER_ENDPOINT!,
-  apiKey: process.env.NEXT_PUBLIC_DEEPTRACER_API_KEY!,
-}}>
+<DeepTracerProvider>{children}</DeepTracerProvider>
 
-Error boundary: Create app/global-error.tsx with:
+Step 5 — Error pages:
 
+Create app/error.tsx:
 "use client"
 export { DeepTracerErrorPage as default } from "@deeptracer/nextjs/client"
 
-Add DEEPTRACER_API_KEY, NEXT_PUBLIC_DEEPTRACER_ENDPOINT, and NEXT_PUBLIC_DEEPTRACER_API_KEY to .env.local
+Create app/global-error.tsx (same — works without a provider):
+"use client"
+export { DeepTracerErrorPage as default } from "@deeptracer/nextjs/client"
+
+CRITICAL RULES:
+- NEVER import @deeptracer/nextjs (without /client) from a "use client" file
+- NEVER import a file that imports @deeptracer/nextjs from a "use client" file
+- Server code: import from @deeptracer/nextjs
+- Client code: import from @deeptracer/nextjs/client
+- For non-React client code: import { createLogger } from "@deeptracer/nextjs/client"
 ```
 
 </details>
@@ -173,11 +181,10 @@ Install @deeptracer/node and @deeptracer/ai. Set up DeepTracer observability.
 import { init, honoMiddleware } from "@deeptracer/node"
 
 const logger = init({
-  product: "<PRODUCT_NAME>",
   service: "api",
   environment: "production",
   endpoint: "<DEEPTRACER_ENDPOINT>",
-  apiKey: process.env.DEEPTRACER_API_KEY!,
+  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
 })
 
 2. Add middleware to the app:
@@ -204,11 +211,10 @@ Install @deeptracer/react. Set up error tracking for my React app.
 import { DeepTracerProvider } from "@deeptracer/react"
 
 <DeepTracerProvider config={{
-  product: "<PRODUCT_NAME>",
   service: "web",
   environment: "production",
   endpoint: "<DEEPTRACER_ENDPOINT>",
-  apiKey: "<DEEPTRACER_API_KEY>",
+  publicKey: "<DEEPTRACER_PUBLIC_KEY>",
 }}>
   <App />
 </DeepTracerProvider>
@@ -240,11 +246,10 @@ Install @deeptracer/node and @deeptracer/ai. Track all LLM API calls automatical
 
 import { init } from "@deeptracer/node"
 const logger = init({
-  product: "<PRODUCT_NAME>",
   service: "api",
   environment: "production",
   endpoint: "<DEEPTRACER_ENDPOINT>",
-  apiKey: process.env.DEEPTRACER_API_KEY!,
+  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
 })
 
 2. Wrap your AI SDK calls:
@@ -318,6 +323,42 @@ export const POST = withRouteHandler(logger, "POST /api/users", async (request) 
 
 This creates a request-scoped span, extracts trace context from headers,
 and captures any errors. Do this for every route handler in the app.
+```
+
+</details>
+
+<details>
+<summary><strong>Replace console calls with structured logging</strong></summary>
+
+```
+I already have @deeptracer/nextjs set up. Replace console.log/warn/error calls
+with structured DeepTracer logging across the codebase.
+
+IMPORTANT — server vs client rules:
+- Server files (API routes, Server Components, lib/ server utils, actions):
+  import { logger } from "@/instrumentation"
+- Client files ("use client" components, hooks, browser utils):
+  DO NOT import from @/instrumentation — it will crash the build.
+  Instead, use one of these:
+  a) import { useLogger } from "@deeptracer/nextjs/client" (inside React components)
+  b) import { createLogger } from "@deeptracer/nextjs/client" (non-React client code)
+  c) Keep console.* calls (they are captured automatically if captureConsole: true)
+
+How to identify server vs client files:
+- Has "use client" directive → CLIENT
+- Imported by a "use client" file (even transitively) → CLIENT
+- Is a React hook (use*.ts) used in client components → CLIENT
+- Everything else → SERVER
+
+Replacement mapping:
+  console.log(msg)     → logger.info(msg)
+  console.info(msg)    → logger.info(msg)
+  console.warn(msg)    → logger.warn(msg)
+  console.error(msg)   → logger.error(msg)
+  console.error(msg, err) → logger.error(msg, {}, err)
+
+For error catches, prefer captureError:
+  console.error("Failed", err) → logger.captureError(err, { severity: "high", context: { source: "..." } })
 ```
 
 </details>

@@ -51,11 +51,10 @@ import { generateText, streamText } from "ai"
 import { openai } from "@ai-sdk/openai"
 
 const logger = init({
-  product: "my-app",
   service: "api",
   environment: "production",
   endpoint: "https://your-deeptracer.example.com",
-  apiKey: "dt_live_xxx",
+  secretKey: "dt_secret_xxx",
 })
 
 // Wrap Vercel AI SDK functions
@@ -298,11 +297,10 @@ import { openai } from "@ai-sdk/openai"
 import { anthropic } from "@ai-sdk/anthropic"
 
 const logger = init({
-  product: "my-app",
   service: "ai-service",
   environment: "production",
   endpoint: process.env.DEEPTRACER_ENDPOINT!,
-  apiKey: process.env.DEEPTRACER_API_KEY!,
+  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
 })
 
 const ai = wrapVercelAI(logger, { generateText, streamText })
@@ -338,11 +336,10 @@ import { wrapOpenAI } from "@deeptracer/ai"
 import OpenAI from "openai"
 
 const logger = init({
-  product: "my-app",
   service: "chatbot",
   environment: "production",
   endpoint: process.env.DEEPTRACER_ENDPOINT!,
-  apiKey: process.env.DEEPTRACER_API_KEY!,
+  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
 })
 
 const openai = wrapOpenAI(logger, new OpenAI({
@@ -381,11 +378,10 @@ import { wrapAnthropic } from "@deeptracer/ai"
 import Anthropic from "@anthropic-ai/sdk"
 
 const logger = init({
-  product: "my-app",
   service: "chatbot",
   environment: "production",
   endpoint: process.env.DEEPTRACER_ENDPOINT!,
-  apiKey: process.env.DEEPTRACER_API_KEY!,
+  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
 })
 
 const anthropic = wrapAnthropic(logger, new Anthropic({
@@ -424,11 +420,10 @@ import OpenAI from "openai"
 import Anthropic from "@anthropic-ai/sdk"
 
 const logger = init({
-  product: "multi-llm-app",
   service: "orchestrator",
   environment: "production",
   endpoint: process.env.DEEPTRACER_ENDPOINT!,
-  apiKey: process.env.DEEPTRACER_API_KEY!,
+  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
 })
 
 // Wrap all three SDKs

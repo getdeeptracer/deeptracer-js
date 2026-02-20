@@ -18,11 +18,10 @@ npm install @deeptracer/browser
 import { createLogger, captureGlobalErrors } from "@deeptracer/browser"
 
 const logger = createLogger({
-  product: "my-app",
   service: "web",
   environment: "production",
   endpoint: "https://deeptracer.example.com",
-  apiKey: "dt_live_xxx",
+  publicKey: "dt_public_xxx",
 })
 
 // Capture all unhandled errors and promise rejections

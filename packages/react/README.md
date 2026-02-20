@@ -20,11 +20,10 @@ import { DeepTracerProvider, DeepTracerErrorBoundary, useLogger } from "@deeptra
 function App() {
   return (
     <DeepTracerProvider config={{
-      product: "my-app",
       service: "web",
       environment: "production",
       endpoint: "https://deeptracer.example.com",
-      apiKey: "dt_live_xxx",
+      publicKey: "dt_public_xxx",
     }}>
       <DeepTracerErrorBoundary fallback={<div>Something went wrong</div>}>
         <MyApp />
@@ -64,19 +63,17 @@ If neither `config` nor `logger` is provided, the provider reads from environmen
 | Environment Variable | Description |
 |---------------------|-------------|
 | `NEXT_PUBLIC_DEEPTRACER_ENDPOINT` | Ingestion endpoint URL (required) |
-| `NEXT_PUBLIC_DEEPTRACER_API_KEY` | API key (required) |
-| `NEXT_PUBLIC_DEEPTRACER_PRODUCT` | Product name (required) |
+| `NEXT_PUBLIC_DEEPTRACER_KEY` | Public key (required) |
 | `NEXT_PUBLIC_DEEPTRACER_SERVICE` | Service name (default: `"web"`) |
 | `NEXT_PUBLIC_DEEPTRACER_ENVIRONMENT` | `"production"` or `"staging"` (default: `"production"`) |
 
 ```tsx
 // Explicit config
 <DeepTracerProvider config={{
-  product: "my-app",
   service: "web",
   environment: "production",
   endpoint: process.env.NEXT_PUBLIC_DEEPTRACER_ENDPOINT!,
-  apiKey: process.env.NEXT_PUBLIC_DEEPTRACER_API_KEY!,
+  publicKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY!,
 }}>
   {children}
 </DeepTracerProvider>
@@ -94,27 +91,29 @@ If neither `config` nor `logger` is provided, the provider reads from environmen
 
 Drop-in function component for Next.js `error.tsx` or `global-error.tsx`. Receives `{ error, reset }` from Next.js, calls `captureError()` in `useEffect`, and shows a default fallback UI with a "Try again" button.
 
+**Works with or without a provider.** If a `<DeepTracerProvider>` is in the tree, uses that logger. If not (e.g., `global-error.tsx` which replaces the entire document), automatically creates a standalone logger from `NEXT_PUBLIC_DEEPTRACER_*` env vars, reports the error, and cleans up.
+
 **One-line setup:**
 
 ```tsx
-// app/global-error.tsx
+// app/global-error.tsx — works WITHOUT a provider
 "use client"
 export { DeepTracerErrorPage as default } from "@deeptracer/react"
 ```
 
 ```tsx
-// app/error.tsx
+// app/error.tsx — works WITH the provider from layout.tsx
 "use client"
 export { DeepTracerErrorPage as default } from "@deeptracer/react"
 ```
-
-Requires a `<DeepTracerProvider>` in the component tree. If no provider is found, the error is displayed but not reported (a `console.warn` is emitted).
 
 ---
 
 ### `useDeepTracerErrorReporter(error, severity?)`
 
 Hook for custom error pages that still want automatic error reporting. Use when you want your own UI but still want DeepTracer to capture the error.
+
+**Works with or without a provider.** Falls back to a standalone logger from `NEXT_PUBLIC_DEEPTRACER_*` env vars when no `<DeepTracerProvider>` is in the tree — safe for `global-error.tsx`.
 
 **Parameters:**
 - `error: Error` — the error to report
@@ -136,11 +135,27 @@ export default function ErrorPage({ error, reset }: { error: Error; reset: () =>
 }
 ```
 
+```tsx
+// app/global-error.tsx — also works here (no provider needed)
+"use client"
+import { useDeepTracerErrorReporter } from "@deeptracer/react"
+
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useDeepTracerErrorReporter(error, "critical")
+  return (
+    <html><body>
+      <h2>Something went wrong</h2>
+      <button onClick={reset}>Try again</button>
+    </body></html>
+  )
+}
+```
+
 ---
 
 ### `DeepTracerErrorBoundary`
 
-Class-based React error boundary that catches rendering errors in child components and reports them to DeepTracer.
+Class-based React error boundary that catches rendering errors in child components and reports them to DeepTracer. **Works with or without a provider** — falls back to a standalone logger from env vars.
 
 **Props:**
 

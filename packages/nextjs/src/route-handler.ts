@@ -58,17 +58,18 @@ import type { Logger } from "@deeptracer/core"
  * )
  * ```
  */
-export function withRouteHandler<T extends (request: Request, ...args: any[]) => any>(
+export function withRouteHandler<T extends (...args: any[]) => any>(
   logger: Logger,
   name: string,
   handler: T,
 ): T {
-  const wrapped = async (request: Request, ...args: any[]) => {
+  const wrapped = async (...args: any[]) => {
+    const request = args[0] as Request
     const reqLogger = logger.forRequest(request)
 
     return reqLogger.startSpan(`route:${name}`, async () => {
       try {
-        return await handler(request, ...args)
+        return await handler(...args)
       } catch (error) {
         reqLogger.captureError(error, {
           severity: "high",
