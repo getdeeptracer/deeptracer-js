@@ -28,10 +28,7 @@ export interface OtelRuntime {
 }
 
 export interface ProcessorConfig {
-  transportConfig: Pick<
-    LoggerConfig,
-    "endpoint" | "secretKey" | "publicKey" | "service" | "environment"
-  >
+  transportConfig: Pick<LoggerConfig, "endpoint" | "apiKey" | "service" | "environment">
   beforeSend?: (event: BeforeSendEvent) => BeforeSendEvent | null
   debug?: boolean
 }

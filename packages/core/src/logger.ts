@@ -87,7 +87,7 @@ export const _originalConsole = {
  * import { createLogger } from "@deeptracer/core"
  *
  * const logger = createLogger({
- *   secretKey: "dt_secret_xxx",
+ *   apiKey: "dt_xxx",
  *   endpoint: "https://deeptracer.example.com",
  *   service: "api",
  *   environment: "production",
@@ -125,18 +125,16 @@ export class Logger {
 
     // Validation warnings — fail gracefully, never crash.
     // Missing key or endpoint = local-only mode (logging methods still work, nothing is sent).
-    const hasKey = !!(config.secretKey || config.publicKey)
+    const hasKey = !!config.apiKey
     const hasEndpoint = !!config.endpoint
     if (!hasKey && !hasEndpoint) {
       _originalConsole.warn(
         "[@deeptracer/core] No API key or endpoint configured. Running in local-only mode " +
           "(logging methods work, but events are not sent). " +
-          "Set DEEPTRACER_SECRET_KEY and DEEPTRACER_ENDPOINT to enable.",
+          "Set DEEPTRACER_KEY and DEEPTRACER_ENDPOINT to enable.",
       )
     } else if (!hasKey) {
-      _originalConsole.warn(
-        "[@deeptracer/core] No `secretKey` or `publicKey` provided. Events will not be sent.",
-      )
+      _originalConsole.warn("[@deeptracer/core] No `apiKey` provided. Events will not be sent.")
     } else if (!hasEndpoint) {
       _originalConsole.warn("[@deeptracer/core] No `endpoint` provided. Events will not be sent.")
     }

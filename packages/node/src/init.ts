@@ -7,7 +7,7 @@ import { captureGlobalErrors } from "./global-errors"
  * Creates a logger and automatically sets up global error capture.
  *
  * All config fields are optional — reads from environment variables:
- * - `DEEPTRACER_SECRET_KEY` — server API key (`dt_secret_...`)
+ * - `DEEPTRACER_KEY` — API key (`dt_...`)
  * - `DEEPTRACER_ENDPOINT` — ingestion API URL
  * - `DEEPTRACER_SERVICE` — service name (auto-detected: `"api"` if Hono/Express, else `"server"`)
  * - `DEEPTRACER_ENVIRONMENT` — environment (default: `NODE_ENV` or `"production"`)
@@ -30,7 +30,7 @@ import { captureGlobalErrors } from "./global-errors"
  * ```ts
  * import { init } from "@deeptracer/node"
  * const logger = init({
- *   secretKey: "dt_secret_xxx",
+ *   apiKey: "dt_xxx",
  *   endpoint: "https://deeptracer.example.com",
  * })
  * ```
@@ -53,7 +53,7 @@ function detectService(): string {
 
 export function init(config?: Partial<LoggerConfig>): Logger {
   const resolved: LoggerConfig = {
-    secretKey: config?.secretKey ?? process.env.DEEPTRACER_SECRET_KEY,
+    apiKey: config?.apiKey ?? process.env.DEEPTRACER_KEY,
     endpoint: config?.endpoint ?? process.env.DEEPTRACER_ENDPOINT,
     service: config?.service ?? detectService(),
     environment:
@@ -69,9 +69,9 @@ export function init(config?: Partial<LoggerConfig>): Logger {
     beforeSend: config?.beforeSend,
   }
 
-  if (!resolved.secretKey) {
+  if (!resolved.apiKey) {
     throw new Error(
-      "[@deeptracer/node] Missing secret key. Set `DEEPTRACER_SECRET_KEY` env var or pass `secretKey` to init().",
+      "[@deeptracer/node] Missing API key. Set `DEEPTRACER_KEY` env var or pass `apiKey` to init().",
     )
   }
   if (!resolved.endpoint) {

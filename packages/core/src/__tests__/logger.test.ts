@@ -343,7 +343,7 @@ describe("Logger", () => {
         (args) => typeof args[0] === "string" && args[0].includes("local-only mode"),
       )
       expect(warnings).toHaveLength(1)
-      expect(warnings[0][0]).toContain("DEEPTRACER_SECRET_KEY")
+      expect(warnings[0][0]).toContain("DEEPTRACER_KEY")
 
       warnSpy.mockRestore()
     })
@@ -353,7 +353,7 @@ describe("Logger", () => {
       createLogger({ endpoint: "https://test.dev", service: "test", environment: "test" } as any)
 
       const warnings = warnSpy.mock.calls.filter(
-        (args) => typeof args[0] === "string" && args[0].includes("No `secretKey`"),
+        (args) => typeof args[0] === "string" && args[0].includes("No `apiKey`"),
       )
       expect(warnings).toHaveLength(1)
 
@@ -362,7 +362,7 @@ describe("Logger", () => {
 
     it("warns when key but no endpoint configured", () => {
       const warnSpy = vi.spyOn(_originalConsole, "warn").mockImplementation(() => {})
-      createLogger({ secretKey: "dt_secret_test", service: "test", environment: "test" } as any)
+      createLogger({ apiKey: "dt_test", service: "test", environment: "test" } as any)
 
       const warnings = warnSpy.mock.calls.filter(
         (args) => typeof args[0] === "string" && args[0].includes("No `endpoint`"),
@@ -380,7 +380,7 @@ describe("Logger", () => {
         (args) =>
           typeof args[0] === "string" &&
           (args[0].includes("local-only") ||
-            args[0].includes("No `secretKey`") ||
+            args[0].includes("No `apiKey`") ||
             args[0].includes("No `endpoint`")),
       )
       expect(warnings).toHaveLength(0)
