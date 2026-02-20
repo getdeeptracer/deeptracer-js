@@ -44,7 +44,7 @@ const logger = init({
   service: "api",
   environment: "production",
   endpoint: "https://your-deeptracer.example.com",
-  secretKey: "dt_secret_xxx",
+  apiKey: "dt_xxx",
 })
 
 // 2. (Optional) Forward all console.* calls to DeepTracer
@@ -74,7 +74,7 @@ const logger = init({
   service: "api",
   environment: "production",
   endpoint: "https://your-deeptracer.example.com",
-  secretKey: "dt_secret_xxx",
+  apiKey: "dt_xxx",
 })
 ```
 
@@ -90,8 +90,7 @@ const logger = init({
 | `service` | `string` | Yes | -- | Service name (e.g., `"api"`) |
 | `environment` | `"production" \| "staging"` | Yes | -- | Deployment environment |
 | `endpoint` | `string` | Yes | -- | DeepTracer ingestion endpoint URL |
-| `secretKey` | `string` | Yes | -- | Server-side API key (prefix: `dt_secret_`) |
-| `publicKey` | `string` | No | -- | Client-side API key (prefix: `dt_public_`) |
+| `apiKey` | `string` | Yes | -- | API key (prefix: `dt_`) |
 | `batchSize` | `number` | No | `50` | Log entries to buffer before flushing |
 | `flushIntervalMs` | `number` | No | `5000` | Milliseconds between automatic flushes |
 | `debug` | `boolean` | No | `false` | Mirror all logs to local console |
@@ -323,7 +322,7 @@ const logger = init({
   service: "api",
   environment: "production",
   endpoint: process.env.DEEPTRACER_ENDPOINT!,
-  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
+  apiKey: process.env.DEEPTRACER_KEY!,
   debug: process.env.NODE_ENV !== "production",
 })
 
@@ -385,7 +384,7 @@ const logger = init({
   service: "web-api",
   environment: "production",
   endpoint: process.env.DEEPTRACER_ENDPOINT!,
-  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
+  apiKey: process.env.DEEPTRACER_KEY!,
 })
 
 captureConsole(logger)
@@ -435,7 +434,7 @@ const logger = init({
   service: "worker",
   environment: "production",
   endpoint: process.env.DEEPTRACER_ENDPOINT!,
-  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
+  apiKey: process.env.DEEPTRACER_KEY!,
 })
 
 const workerLogger = logger.withContext("job-processor")

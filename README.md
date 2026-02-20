@@ -56,7 +56,7 @@ const logger = init({
   service: "api",
   environment: "production",
   endpoint: "https://your-deeptracer.com",
-  secretKey: "dt_secret_xxx",
+  apiKey: "dt_xxx",
 })
 
 // 2. Add middleware to your framework
@@ -84,7 +84,7 @@ export const { register, onRequestError } = init({
   service: "web",
   environment: "production",
   endpoint: "https://your-deeptracer.com",
-  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
+  apiKey: process.env.DEEPTRACER_KEY!,
 })
 ```
 
@@ -129,9 +129,9 @@ Step 1 — Install:
 npm install @deeptracer/nextjs
 
 Step 2 — Environment variables in .env.local:
-DEEPTRACER_SECRET_KEY=dt_secret_xxx
+DEEPTRACER_KEY=dt_xxx
 DEEPTRACER_ENDPOINT=https://your-deeptracer.example.com
-NEXT_PUBLIC_DEEPTRACER_KEY=dt_public_xxx
+NEXT_PUBLIC_DEEPTRACER_KEY=dt_xxx
 NEXT_PUBLIC_DEEPTRACER_ENDPOINT=https://your-deeptracer.example.com
 
 Step 3 — Create instrumentation.ts in the project root:
@@ -164,8 +164,8 @@ CRITICAL RULES:
 - NEVER import @deeptracer/nextjs (without /client) from a "use client" file — it has `import "server-only"` and will fail the build with a clear error
 - NEVER import a file that imports @deeptracer/nextjs from a "use client" file
 - Server code: import from @deeptracer/nextjs
-- Client code: import from @deeptracer/nextjs/client
-- For non-React client code: import { createLogger } from "@deeptracer/nextjs/client"
+- Client code ("use client" files): import from @deeptracer/nextjs/client
+- Shared code (imported by both server and client): import { createLogger } from "@deeptracer/nextjs/universal"
 - useLogger() is safe to call without a provider (returns a no-op logger during SSR/SSG)
 ```
 
@@ -185,7 +185,7 @@ const logger = init({
   service: "api",
   environment: "production",
   endpoint: "<DEEPTRACER_ENDPOINT>",
-  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
+  apiKey: process.env.DEEPTRACER_KEY!,
 })
 
 2. Add middleware to the app:
@@ -215,7 +215,7 @@ import { DeepTracerProvider } from "@deeptracer/react"
   service: "web",
   environment: "production",
   endpoint: "<DEEPTRACER_ENDPOINT>",
-  publicKey: "<DEEPTRACER_PUBLIC_KEY>",
+  apiKey: "<DEEPTRACER_KEY>",
 }}>
   <App />
 </DeepTracerProvider>
@@ -250,7 +250,7 @@ const logger = init({
   service: "api",
   environment: "production",
   endpoint: "<DEEPTRACER_ENDPOINT>",
-  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
+  apiKey: process.env.DEEPTRACER_KEY!,
 })
 
 2. Wrap your AI SDK calls:
@@ -335,21 +335,22 @@ and captures any errors. Do this for every route handler in the app.
 I already have @deeptracer/nextjs set up. Replace console.log/warn/error calls
 with structured DeepTracer logging across the codebase.
 
-IMPORTANT — server vs client rules:
-- Server files (API routes, Server Components, lib/ server utils, actions):
+IMPORTANT — server vs client vs shared rules:
+- Server-only files (API routes, Server Components, actions):
   import { logger } from "@/instrumentation"
-- Client files ("use client" components, hooks, browser utils):
-  DO NOT import from @/instrumentation — it will crash the build.
-  Instead, use one of these:
+- Client-only files ("use client" components, hooks):
   a) import { useLogger } from "@deeptracer/nextjs/client" (inside React components)
-  b) import { createLogger } from "@deeptracer/nextjs/client" (non-React client code)
-  c) Keep console.* calls (they are captured automatically if captureConsole: true)
+  b) import { createLogger } from "@deeptracer/nextjs/client" ("use client" files outside React)
+- Shared files (imported by BOTH server and client — analytics, utils, helpers):
+  import { createLogger } from "@deeptracer/nextjs/universal"
+  DO NOT use @deeptracer/nextjs (has "server-only") or /client (has "use client").
 
-How to identify server vs client files:
-- Has "use client" directive → CLIENT
-- Imported by a "use client" file (even transitively) → CLIENT
-- Is a React hook (use*.ts) used in client components → CLIENT
-- Everything else → SERVER
+How to identify which zone a file is in:
+- Has "use client" directive → CLIENT — use /client
+- Imported by a "use client" file (even transitively) → check if also imported by server code
+  - If yes → SHARED — use /universal
+  - If no → CLIENT — use /client
+- Everything else → SERVER — import from @/instrumentation
 
 Replacement mapping:
   console.log(msg)     → logger.info(msg)

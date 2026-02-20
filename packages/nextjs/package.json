@@ -28,6 +28,11 @@
       "types": "./dist/index.client.d.ts",
       "import": "./dist/index.client.js",
       "require": "./dist/index.client.cjs"
+    },
+    "./universal": {
+      "types": "./dist/index.universal.d.ts",
+      "import": "./dist/index.universal.js",
+      "require": "./dist/index.universal.cjs"
     }
   },
   "files": [

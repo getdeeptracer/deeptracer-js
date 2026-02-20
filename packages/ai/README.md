@@ -54,7 +54,7 @@ const logger = init({
   service: "api",
   environment: "production",
   endpoint: "https://your-deeptracer.example.com",
-  secretKey: "dt_secret_xxx",
+  apiKey: "dt_xxx",
 })
 
 // Wrap Vercel AI SDK functions
@@ -300,7 +300,7 @@ const logger = init({
   service: "ai-service",
   environment: "production",
   endpoint: process.env.DEEPTRACER_ENDPOINT!,
-  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
+  apiKey: process.env.DEEPTRACER_KEY!,
 })
 
 const ai = wrapVercelAI(logger, { generateText, streamText })
@@ -339,7 +339,7 @@ const logger = init({
   service: "chatbot",
   environment: "production",
   endpoint: process.env.DEEPTRACER_ENDPOINT!,
-  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
+  apiKey: process.env.DEEPTRACER_KEY!,
 })
 
 const openai = wrapOpenAI(logger, new OpenAI({
@@ -381,7 +381,7 @@ const logger = init({
   service: "chatbot",
   environment: "production",
   endpoint: process.env.DEEPTRACER_ENDPOINT!,
-  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
+  apiKey: process.env.DEEPTRACER_KEY!,
 })
 
 const anthropic = wrapAnthropic(logger, new Anthropic({
@@ -423,7 +423,7 @@ const logger = init({
   service: "orchestrator",
   environment: "production",
   endpoint: process.env.DEEPTRACER_ENDPOINT!,
-  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
+  apiKey: process.env.DEEPTRACER_KEY!,
 })
 
 // Wrap all three SDKs

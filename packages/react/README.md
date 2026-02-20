@@ -23,7 +23,7 @@ function App() {
       service: "web",
       environment: "production",
       endpoint: "https://deeptracer.example.com",
-      publicKey: "dt_public_xxx",
+      apiKey: "dt_xxx",
     }}>
       <DeepTracerErrorBoundary fallback={<div>Something went wrong</div>}>
         <MyApp />
@@ -73,7 +73,7 @@ If neither `config` nor `logger` is provided, the provider reads from environmen
   service: "web",
   environment: "production",
   endpoint: process.env.NEXT_PUBLIC_DEEPTRACER_ENDPOINT!,
-  publicKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY!,
+  apiKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY!,
 }}>
   {children}
 </DeepTracerProvider>

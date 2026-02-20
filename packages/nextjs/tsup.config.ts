@@ -8,7 +8,7 @@ const external = [
 
 export default defineConfig([
   {
-    entry: ["src/index.server.ts", "src/index.types.ts"],
+    entry: ["src/index.server.ts", "src/index.types.ts", "src/index.universal.ts"],
     format: ["esm", "cjs"],
     dts: { compilerOptions: { composite: false } },
     clean: false,

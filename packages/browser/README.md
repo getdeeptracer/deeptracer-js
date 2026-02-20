@@ -21,7 +21,7 @@ const logger = createLogger({
   service: "web",
   environment: "production",
   endpoint: "https://deeptracer.example.com",
-  publicKey: "dt_public_xxx",
+  apiKey: "dt_xxx",
 })
 
 // Capture all unhandled errors and promise rejections
