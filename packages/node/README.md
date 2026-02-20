@@ -41,11 +41,10 @@ import { Hono } from "hono"
 
 // 1. Initialize -- creates a logger and captures uncaught errors automatically
 const logger = init({
-  product: "my-app",
   service: "api",
   environment: "production",
   endpoint: "https://your-deeptracer.example.com",
-  apiKey: "dt_live_xxx",
+  secretKey: "dt_secret_xxx",
 })
 
 // 2. (Optional) Forward all console.* calls to DeepTracer
@@ -72,11 +71,10 @@ Initialize DeepTracer for Node.js/Bun with sensible defaults. Creates a `Logger`
 import { init } from "@deeptracer/node"
 
 const logger = init({
-  product: "my-app",
   service: "api",
   environment: "production",
   endpoint: "https://your-deeptracer.example.com",
-  apiKey: "dt_live_xxx",
+  secretKey: "dt_secret_xxx",
 })
 ```
 
@@ -89,11 +87,11 @@ const logger = init({
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `product` | `string` | Yes | -- | Product name (e.g., `"spotbeam"`) |
 | `service` | `string` | Yes | -- | Service name (e.g., `"api"`) |
 | `environment` | `"production" \| "staging"` | Yes | -- | Deployment environment |
 | `endpoint` | `string` | Yes | -- | DeepTracer ingestion endpoint URL |
-| `apiKey` | `string` | Yes | -- | DeepTracer API key |
+| `secretKey` | `string` | Yes | -- | Server-side API key (prefix: `dt_secret_`) |
+| `publicKey` | `string` | No | -- | Client-side API key (prefix: `dt_public_`) |
 | `batchSize` | `number` | No | `50` | Log entries to buffer before flushing |
 | `flushIntervalMs` | `number` | No | `5000` | Milliseconds between automatic flushes |
 | `debug` | `boolean` | No | `false` | Mirror all logs to local console |
@@ -322,11 +320,10 @@ import { openai } from "@ai-sdk/openai"
 
 // Initialize DeepTracer
 const logger = init({
-  product: "my-saas",
   service: "api",
   environment: "production",
   endpoint: process.env.DEEPTRACER_ENDPOINT!,
-  apiKey: process.env.DEEPTRACER_API_KEY!,
+  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
   debug: process.env.NODE_ENV !== "production",
 })
 
@@ -385,11 +382,10 @@ import express from "express"
 import { init, expressMiddleware, captureConsole } from "@deeptracer/node"
 
 const logger = init({
-  product: "my-saas",
   service: "web-api",
   environment: "production",
   endpoint: process.env.DEEPTRACER_ENDPOINT!,
-  apiKey: process.env.DEEPTRACER_API_KEY!,
+  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
 })
 
 captureConsole(logger)
@@ -436,11 +432,10 @@ A background job processor with tracing:
 import { init } from "@deeptracer/node"
 
 const logger = init({
-  product: "my-saas",
   service: "worker",
   environment: "production",
   endpoint: process.env.DEEPTRACER_ENDPOINT!,
-  apiKey: process.env.DEEPTRACER_API_KEY!,
+  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
 })
 
 const workerLogger = logger.withContext("job-processor")

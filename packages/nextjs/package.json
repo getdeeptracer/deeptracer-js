@@ -9,10 +9,6 @@
   "exports": {
     ".": {
       "types": "./dist/index.types.d.ts",
-      "browser": {
-        "import": "./dist/index.client.js",
-        "require": "./dist/index.client.cjs"
-      },
       "edge-light": {
         "import": "./dist/index.server.js",
         "require": "./dist/index.server.cjs"
@@ -52,6 +48,9 @@
     "directory": "packages/nextjs"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@deeptracer/core": "0.4.1",
     "@deeptracer/node": "0.4.1",

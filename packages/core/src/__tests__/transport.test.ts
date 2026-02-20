@@ -203,6 +203,106 @@ describe("Transport", () => {
     })
   })
 
+  describe("disabled mode", () => {
+    it("does not send when no key is configured", async () => {
+      const transport = new Transport({
+        endpoint: "https://test.deeptracer.dev",
+        secretKey: undefined,
+        publicKey: undefined,
+        service: "test",
+        environment: "test",
+      })
+
+      await transport.sendLogs([{ timestamp: "t", level: "info", message: "hi" }])
+      await transport.sendError({ error_message: "boom", stack_trace: "", severity: "high" })
+      await transport.sendTrace({
+        trace_id: "t1",
+        span_id: "s1",
+        parent_span_id: "",
+        operation: "test",
+        start_time: "t",
+        duration_ms: 100,
+        status: "ok",
+      })
+
+      expect(fetch).not.toHaveBeenCalled()
+    })
+
+    it("does not send when no endpoint is configured", async () => {
+      const transport = new Transport({
+        endpoint: undefined as any,
+        secretKey: "dt_secret_test",
+        service: "test",
+        environment: "test",
+      })
+
+      await transport.sendLogs([{ timestamp: "t", level: "info", message: "hi" }])
+      expect(fetch).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("warn-once behavior", () => {
+    it("warns only once for repeated failures of the same type", async () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => new Response(null, { status: 500 })),
+      )
+
+      const transport = createTransport()
+
+      // First send — should warn
+      const p1 = transport.sendLogs([])
+      await vi.advanceTimersByTimeAsync(10000)
+      await p1
+
+      // Second send — should NOT warn again
+      const p2 = transport.sendLogs([])
+      await vi.advanceTimersByTimeAsync(10000)
+      await p2
+
+      const logWarnings = warnSpy.mock.calls.filter(
+        (args) => typeof args[0] === "string" && args[0].includes("Failed to send logs"),
+      )
+      expect(logWarnings).toHaveLength(1)
+
+      warnSpy.mockRestore()
+    })
+
+    it("warns again after a successful send (endpoint recovered)", async () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+      let shouldFail = true
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => new Response(null, { status: shouldFail ? 500 : 200 })),
+      )
+
+      const transport = createTransport()
+
+      // First send — fails, warns
+      const p1 = transport.sendLogs([])
+      await vi.advanceTimersByTimeAsync(10000)
+      await p1
+
+      // Endpoint recovers
+      shouldFail = false
+      await transport.sendLogs([])
+
+      // Endpoint fails again — should warn again (recovered in between)
+      shouldFail = true
+      const p3 = transport.sendLogs([])
+      await vi.advanceTimersByTimeAsync(10000)
+      await p3
+
+      const logWarnings = warnSpy.mock.calls.filter(
+        (args) => typeof args[0] === "string" && args[0].includes("Failed to send logs"),
+      )
+      expect(logWarnings).toHaveLength(2)
+
+      warnSpy.mockRestore()
+    })
+  })
+
   describe("drain", () => {
     it("resolves immediately when no in-flight requests", async () => {
       const transport = createTransport()

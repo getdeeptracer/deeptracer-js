@@ -47,11 +47,10 @@ The package ships as both ESM and CJS with full TypeScript declarations. Zero ru
 import { createLogger } from "@deeptracer/core"
 
 const logger = createLogger({
-  product: "my-app",
   service: "api",
   environment: "production",
   endpoint: "https://your-deeptracer.example.com",
-  apiKey: "dt_live_xxx",
+  secretKey: "dt_secret_xxx",
 })
 
 // Structured logging (batched -- sent in groups of 50 or every 5 seconds)
@@ -85,11 +84,10 @@ Pass a `LoggerConfig` object to `createLogger()`:
 ```ts
 const logger = createLogger({
   // Required
-  product: "spotbeam",           // Product name for grouping in the dashboard
   service: "api",                // Service name within the product
   environment: "production",     // "production" or "staging"
   endpoint: "https://dt.co",     // DeepTracer ingestion endpoint URL
-  apiKey: "dt_live_xxx",         // API key for authentication
+  secretKey: "dt_secret_xxx",    // Server-side API key for authentication
 
   // Optional
   batchSize: 50,                 // Logs to buffer before sending (default: 50)
@@ -100,11 +98,11 @@ const logger = createLogger({
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `product` | `string` | Yes | -- | Product name (e.g., `"spotbeam"`, `"macro"`) |
 | `service` | `string` | Yes | -- | Service name (e.g., `"api"`, `"worker"`, `"web"`) |
 | `environment` | `"production" \| "staging"` | Yes | -- | Deployment environment |
 | `endpoint` | `string` | Yes | -- | DeepTracer ingestion endpoint URL |
-| `apiKey` | `string` | Yes | -- | DeepTracer API key |
+| `secretKey` | `string` | Yes | -- | Server-side API key (prefix: `dt_secret_`) |
+| `publicKey` | `string` | No | -- | Client-side API key (prefix: `dt_public_`) |
 | `batchSize` | `number` | No | `50` | Number of log entries to buffer before flushing |
 | `flushIntervalMs` | `number` | No | `5000` | Milliseconds between automatic flushes |
 | `debug` | `boolean` | No | `false` | When `true`, all log calls also print to the console |
@@ -119,11 +117,10 @@ Create a new `Logger` instance. This is the main entry point.
 import { createLogger } from "@deeptracer/core"
 
 const logger = createLogger({
-  product: "my-app",
   service: "api",
   environment: "production",
   endpoint: "https://your-deeptracer.example.com",
-  apiKey: "dt_live_xxx",
+  secretKey: "dt_secret_xxx",
 })
 ```
 
@@ -439,11 +436,11 @@ process.on("SIGTERM", () => {
 
 ```ts
 interface LoggerConfig {
-  product: string
   service: string
   environment: "production" | "staging"
   endpoint: string
-  apiKey: string
+  secretKey: string
+  publicKey?: string
   batchSize?: number          // default: 50
   flushIntervalMs?: number    // default: 5000
   debug?: boolean             // default: false
@@ -587,9 +584,9 @@ The transport layer sends data to four DeepTracer ingestion endpoints:
 | `POST /ingest/llm` | Immediate | LLM usage reports |
 
 All requests include:
-- `Authorization: Bearer <apiKey>` header
+- `Authorization: Bearer <secretKey>` header
 - `Content-Type: application/json` header
-- `product`, `service`, and `environment` fields in the JSON body
+- `service` and `environment` fields in the JSON body
 
 If a request fails, a warning is logged to the console. The SDK does not retry failed requests -- it is designed to be non-blocking and never crash your application.
 

@@ -31,6 +31,9 @@
     "directory": "packages/react"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@deeptracer/browser": "0.4.1"
   },

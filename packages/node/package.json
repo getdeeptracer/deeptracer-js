@@ -34,6 +34,9 @@
     "directory": "packages/node"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@deeptracer/core": "0.4.1"
   },
