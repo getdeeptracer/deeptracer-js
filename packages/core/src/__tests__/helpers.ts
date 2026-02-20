@@ -4,7 +4,7 @@ import type { LoggerConfig } from "../types"
 /** Minimal valid config for tests. Endpoint is fake — transport tests mock fetch. */
 export function testConfig(overrides?: Partial<LoggerConfig>): LoggerConfig {
   return {
-    secretKey: "dt_secret_test_key",
+    apiKey: "dt_test_key",
     endpoint: "https://test.deeptracer.dev",
     service: "test-service",
     environment: "test",

@@ -33,27 +33,15 @@ export class Transport {
   private warnedLabels = new Set<string>()
 
   constructor(
-    private config: Pick<
-      LoggerConfig,
-      "endpoint" | "secretKey" | "publicKey" | "service" | "environment"
-    >,
+    private config: Pick<LoggerConfig, "endpoint" | "apiKey" | "service" | "environment">,
   ) {
-    const hasKey = !!(config.secretKey || config.publicKey)
+    const hasKey = !!config.apiKey
     const hasEndpoint = !!config.endpoint
     this.disabled = !hasKey || !hasEndpoint
-
-    // Loud warning if a secret key is used in a browser context
-    if (config.secretKey?.startsWith("dt_secret_") && typeof globalThis.window !== "undefined") {
-      console.error(
-        "[@deeptracer/core] WARNING: `secretKey` (dt_secret_...) detected in a browser bundle. " +
-          "This exposes your server key to end users. Use `publicKey` (dt_public_...) for client-side code.",
-      )
-    }
   }
 
-  /** Resolve the auth key: prefer secretKey (server), fall back to publicKey (client). */
   private get authKey(): string {
-    return this.config.secretKey ?? this.config.publicKey ?? ""
+    return this.config.apiKey ?? ""
   }
 
   /**

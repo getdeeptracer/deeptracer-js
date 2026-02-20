@@ -2,12 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { Transport } from "../transport"
 import type { LogEntry } from "../types"
 
-function createTransport(
-  overrides?: Partial<{ endpoint: string; secretKey: string; publicKey: string }>,
-) {
+function createTransport(overrides?: Partial<{ endpoint: string; apiKey: string }>) {
   return new Transport({
     endpoint: "https://test.deeptracer.dev",
-    secretKey: "dt_secret_test",
+    apiKey: "dt_test",
     service: "test-svc",
     environment: "test",
     ...overrides,
@@ -52,7 +50,7 @@ describe("Transport", () => {
 
       const [, init] = (fetch as any).mock.calls[0]
       const headers = init.headers
-      expect(headers.Authorization).toBe("Bearer dt_secret_test")
+      expect(headers.Authorization).toBe("Bearer dt_test")
     })
 
     it("includes x-deeptracer-sdk header", async () => {
@@ -186,20 +184,12 @@ describe("Transport", () => {
   })
 
   describe("auth key resolution", () => {
-    it("prefers secretKey over publicKey", async () => {
-      const transport = createTransport({ secretKey: "dt_secret_s", publicKey: "dt_public_p" })
+    it("uses apiKey for Authorization header", async () => {
+      const transport = createTransport({ apiKey: "dt_my_key" })
       await transport.sendLogs([])
 
       const [, init] = (fetch as any).mock.calls[0]
-      expect(init.headers.Authorization).toBe("Bearer dt_secret_s")
-    })
-
-    it("falls back to publicKey when no secretKey", async () => {
-      const transport = createTransport({ secretKey: undefined, publicKey: "dt_public_p" })
-      await transport.sendLogs([])
-
-      const [, init] = (fetch as any).mock.calls[0]
-      expect(init.headers.Authorization).toBe("Bearer dt_public_p")
+      expect(init.headers.Authorization).toBe("Bearer dt_my_key")
     })
   })
 
@@ -207,8 +197,7 @@ describe("Transport", () => {
     it("does not send when no key is configured", async () => {
       const transport = new Transport({
         endpoint: "https://test.deeptracer.dev",
-        secretKey: undefined,
-        publicKey: undefined,
+        apiKey: undefined,
         service: "test",
         environment: "test",
       })
@@ -231,7 +220,7 @@ describe("Transport", () => {
     it("does not send when no endpoint is configured", async () => {
       const transport = new Transport({
         endpoint: undefined as any,
-        secretKey: "dt_secret_test",
+        apiKey: "dt_test",
         service: "test",
         environment: "test",
       })

@@ -106,7 +106,7 @@ export interface InitResult {
  * to be re-exported from your `instrumentation.ts` file.
  *
  * All config fields are optional — reads from environment variables:
- * - `DEEPTRACER_SECRET_KEY` — server API key (`dt_secret_...`)
+ * - `DEEPTRACER_KEY` — API key (`dt_...`)
  * - `DEEPTRACER_ENDPOINT` — ingestion API URL
  * - `DEEPTRACER_SERVICE` — service name (default: `"nextjs"`)
  * - `DEEPTRACER_ENVIRONMENT` — environment (default: `NODE_ENV` or `"production"`)
@@ -130,14 +130,14 @@ export interface InitResult {
  * import { init } from "@deeptracer/nextjs"
  *
  * export const { register, onRequestError } = init({
- *   secretKey: process.env.DEEPTRACER_SECRET_KEY!,
+ *   apiKey: process.env.DEEPTRACER_KEY!,
  *   endpoint: "https://deeptracer.example.com",
  * })
  * ```
  */
 export function init(config?: NextjsConfig): InitResult {
   const resolved: LoggerConfig = {
-    secretKey: config?.secretKey ?? process.env.DEEPTRACER_SECRET_KEY,
+    apiKey: config?.apiKey ?? process.env.DEEPTRACER_KEY,
     endpoint: config?.endpoint ?? process.env.DEEPTRACER_ENDPOINT,
     service: config?.service ?? process.env.DEEPTRACER_SERVICE ?? "nextjs",
     environment:
@@ -153,9 +153,9 @@ export function init(config?: NextjsConfig): InitResult {
     beforeSend: config?.beforeSend,
   }
 
-  if (!resolved.secretKey) {
+  if (!resolved.apiKey) {
     throw new Error(
-      "[@deeptracer/nextjs] Missing secret key. Set `DEEPTRACER_SECRET_KEY` env var or pass `secretKey` to init().",
+      "[@deeptracer/nextjs] Missing API key. Set `DEEPTRACER_KEY` env var or pass `apiKey` to init().",
     )
   }
   if (!resolved.endpoint) {
@@ -303,8 +303,7 @@ async function setupOtelTracing(
       {
         transportConfig: {
           endpoint: resolved.endpoint,
-          secretKey: resolved.secretKey,
-          publicKey: resolved.publicKey,
+          apiKey: resolved.apiKey,
           service: resolved.service,
           environment: resolved.environment,
         },

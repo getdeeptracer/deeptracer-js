@@ -26,7 +26,7 @@ export interface DeepTracerProviderProps {
    * @example
    * ```tsx
    * <DeepTracerProvider config={{
-   *   publicKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY!,
+   *   apiKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY!,
    *   endpoint: process.env.NEXT_PUBLIC_DEEPTRACER_ENDPOINT!,
    * }}>
    * ```
@@ -62,7 +62,7 @@ export interface DeepTracerProviderProps {
  * export default function App({ children }) {
  *   return (
  *     <DeepTracerProvider config={{
- *       publicKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY!,
+ *       apiKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY!,
  *       endpoint: process.env.NEXT_PUBLIC_DEEPTRACER_ENDPOINT!,
  *     }}>
  *       {children}
@@ -128,10 +128,10 @@ export function readConfigFromEnv(): LoggerConfig | null {
   const safeEnv = (name: string): string | undefined =>
     typeof process !== "undefined" ? process.env?.[name] : undefined
 
-  const publicKey = safeEnv("NEXT_PUBLIC_DEEPTRACER_KEY")
+  const apiKey = safeEnv("NEXT_PUBLIC_DEEPTRACER_KEY")
   const endpoint = safeEnv("NEXT_PUBLIC_DEEPTRACER_ENDPOINT")
 
-  if (!publicKey || !endpoint) return null
+  if (!apiKey || !endpoint) return null
 
   const level = safeEnv("NEXT_PUBLIC_DEEPTRACER_LOG_LEVEL") as
     | "debug"
@@ -141,7 +141,7 @@ export function readConfigFromEnv(): LoggerConfig | null {
     | undefined
 
   return {
-    publicKey,
+    apiKey,
     endpoint,
     service: safeEnv("NEXT_PUBLIC_DEEPTRACER_SERVICE") ?? "web",
     environment: safeEnv("NEXT_PUBLIC_DEEPTRACER_ENVIRONMENT") ?? "production",

@@ -2,34 +2,22 @@
  * Configuration for creating a DeepTracer logger instance.
  *
  * All fields are optional when environment variables are set.
- * Server packages read `DEEPTRACER_SECRET_KEY`, `DEEPTRACER_ENDPOINT`, etc.
+ * Server packages read `DEEPTRACER_KEY`, `DEEPTRACER_ENDPOINT`, etc.
  * Client packages read `NEXT_PUBLIC_DEEPTRACER_KEY`, `NEXT_PUBLIC_DEEPTRACER_ENDPOINT`, etc.
  *
  * @example
- * Server (Node.js / Next.js instrumentation):
  * ```ts
  * const config: LoggerConfig = {
- *   secretKey: "dt_secret_xxx",
+ *   apiKey: "dt_xxx",
  *   endpoint: "https://deeptracer.example.com",
  *   service: "api",
  *   environment: "production",
  * }
  * ```
- *
- * @example
- * Client (browser / React):
- * ```ts
- * const config: LoggerConfig = {
- *   publicKey: "dt_public_xxx",
- *   endpoint: "https://deeptracer.example.com",
- * }
- * ```
  */
 export interface LoggerConfig {
-  /** Server-side API key (prefix: `dt_secret_`). Never expose in client bundles. */
-  secretKey?: string
-  /** Client-side API key (prefix: `dt_public_`). Safe for browser bundles. */
-  publicKey?: string
+  /** DeepTracer API key (prefix: `dt_`). Set via `DEEPTRACER_KEY` or `NEXT_PUBLIC_DEEPTRACER_KEY` env var. */
+  apiKey?: string
   /** Service name (e.g., "api", "worker", "web"). Default varies by package. */
   service?: string
   /** Deployment environment (any string). Default: `NODE_ENV` or `"production"` */
