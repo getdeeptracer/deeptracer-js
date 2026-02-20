@@ -14,7 +14,7 @@ npm install @deeptracer/nextjs
 
 ## Quick Start (1 file, 3 lines)
 
-Set `DEEPTRACER_SECRET_KEY` and `DEEPTRACER_ENDPOINT` in `.env.local`, then create `instrumentation.ts` in your project root:
+Set `DEEPTRACER_KEY` and `DEEPTRACER_ENDPOINT` in `.env.local`, then create `instrumentation.ts` in your project root:
 
 ```ts
 import { init } from "@deeptracer/nextjs"
@@ -26,7 +26,7 @@ That's it. All server-side errors are now captured automatically. `init()` reads
 ```ts
 export const { register, onRequestError } = init({
   service: "web",
-  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
+  apiKey: process.env.DEEPTRACER_KEY!,
   endpoint: "https://deeptracer.example.com",
 })
 ```
@@ -39,11 +39,13 @@ export const { register, onRequestError } = init({
 |---------|------------|---------|
 | `instrumentation.ts`, API routes, Server Components, middleware | `@deeptracer/nextjs` | `init`, `withRouteHandler`, `withServerAction`, `Logger` |
 | `"use client"` components, React hooks, browser utilities | `@deeptracer/nextjs/client` | `DeepTracerProvider`, `useLogger`, `useDeepTracerErrorReporter`, `createLogger` |
+| Shared code (imported by both server and client) | `@deeptracer/nextjs/universal` | `createLogger`, `Logger`, types |
 
 **Rules:**
 - **NEVER** import `@deeptracer/nextjs` (without `/client`) from a `"use client"` file — even transitively. The build will fail with a clear `server-only` error.
 - **NEVER** import a file that imports `@deeptracer/nextjs` from a `"use client"` file
-- For non-React client code (utility modules, localStorage helpers), use: `import { createLogger } from "@deeptracer/nextjs/client"`
+- For shared code (used by both server and client): `import { createLogger } from "@deeptracer/nextjs/universal"`
+- For React client code: `import { useLogger } from "@deeptracer/nextjs/client"`
 
 ## What Gets Captured Automatically
 
@@ -87,7 +89,7 @@ const deeptracer = init({
   service: "web",
   environment: "production",
   endpoint: "https://deeptracer.example.com",
-  secretKey: process.env.DEEPTRACER_SECRET_KEY!,
+  apiKey: process.env.DEEPTRACER_KEY!,
 })
 
 export const { register, onRequestError } = deeptracer
@@ -195,7 +197,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           service: "web",
           environment: "production",
           endpoint: process.env.NEXT_PUBLIC_DEEPTRACER_ENDPOINT!,
-          publicKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY!,
+          apiKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY!,
         }}>
           {children}
         </DeepTracerProvider>
@@ -251,7 +253,23 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 
 - `DeepTracerErrorBoundary` — class-based error boundary for wrapping React trees (works without a provider)
 - `useLogger()` — hook to access Logger from context (returns a no-op logger if no provider — safe during SSR/SSG)
-- `createLogger(config)` — create a standalone Logger for non-React client code (utility modules, localStorage helpers)
+- `createLogger(config)` — create a standalone Logger for `"use client"` files outside React components
+
+### Universal exports (boundary-neutral)
+
+For shared code imported by both server and client (analytics utilities, API clients, helpers):
+
+```ts
+import { createLogger } from "@deeptracer/nextjs/universal"
+
+export const logger = createLogger({
+  apiKey: process.env.NEXT_PUBLIC_DEEPTRACER_KEY,
+  endpoint: process.env.NEXT_PUBLIC_DEEPTRACER_ENDPOINT,
+  service: "dashboard",
+})
+```
+
+No `"use client"`, no `"server-only"` — safe to import from anywhere. Exports: `createLogger`, `Logger`, and all types.
 
 ## Full Setup (Server + Client)
 
@@ -259,9 +277,9 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 
 ```bash
 # .env.local
-DEEPTRACER_SECRET_KEY=dt_secret_xxx            # Server — required
+DEEPTRACER_KEY=dt_xxx            # Server — required
 DEEPTRACER_ENDPOINT=https://deeptracer.example.com  # Server — required
-NEXT_PUBLIC_DEEPTRACER_KEY=dt_public_xxx       # Client — required for provider
+NEXT_PUBLIC_DEEPTRACER_KEY=dt_xxx       # Client — required for provider
 NEXT_PUBLIC_DEEPTRACER_ENDPOINT=https://deeptracer.example.com  # Client — required for provider
 ```
 
@@ -277,7 +295,7 @@ export const { register, onRequestError } = deeptracer
 export const logger = deeptracer.logger
 ```
 
-`init()` reads `DEEPTRACER_SECRET_KEY` and `DEEPTRACER_ENDPOINT` from env vars automatically. Pass explicit config only if you need to override.
+`init()` reads `DEEPTRACER_KEY` and `DEEPTRACER_ENDPOINT` from env vars automatically. Pass explicit config only if you need to override.
 
 ### 3. Client provider (recommended)
 
@@ -344,10 +362,10 @@ logger.setUser({ id: user.id, email: user.email })
 
 | Variable | Side | Required | Description |
 |----------|------|----------|-------------|
-| `DEEPTRACER_SECRET_KEY` | Server | Yes | Secret key (prefix: `dt_secret_`) |
+| `DEEPTRACER_KEY` | Server | Yes | API key (prefix: `dt_`) |
 | `DEEPTRACER_ENDPOINT` | Server | Yes | Ingestion endpoint URL |
 | `DEEPTRACER_ENVIRONMENT` | Server | No | `"production"` / `"staging"` (default: `NODE_ENV`) |
-| `NEXT_PUBLIC_DEEPTRACER_KEY` | Client | Yes | Public key (prefix: `dt_public_`) |
+| `NEXT_PUBLIC_DEEPTRACER_KEY` | Client | Yes | Same API key (needs `NEXT_PUBLIC_` prefix for Next.js client exposure) |
 | `NEXT_PUBLIC_DEEPTRACER_ENDPOINT` | Client | Yes | Ingestion endpoint URL |
 | `NEXT_PUBLIC_DEEPTRACER_SERVICE` | Client | No | Service name (default: `"web"`) |
 | `NEXT_PUBLIC_DEEPTRACER_ENVIRONMENT` | Client | No | `"production"` / `"staging"` (default: `"production"`) |
@@ -363,7 +381,17 @@ import { logger } from "@/instrumentation" // instrumentation.ts imports @deeptr
 // GOOD — use the client subpath
 "use client"
 import { useLogger } from "@deeptracer/nextjs/client"     // in React components
-import { createLogger } from "@deeptracer/nextjs/client"   // in non-React client code
+import { createLogger } from "@deeptracer/nextjs/client"   // in "use client" files outside React
+```
+
+**Shared code (imported by both server and client):**
+```ts
+// BAD — @deeptracer/nextjs has "server-only", @deeptracer/nextjs/client has "use client"
+import { createLogger } from "@deeptracer/nextjs"         // breaks client imports
+import { createLogger } from "@deeptracer/nextjs/client"   // breaks server imports
+
+// GOOD — use the universal subpath (no directives)
+import { createLogger } from "@deeptracer/nextjs/universal"
 ```
 
 **Transitive server imports:**
@@ -372,9 +400,9 @@ import { createLogger } from "@deeptracer/nextjs/client"   // in non-React clien
 // "use client"
 // import { fetchUser } from "@/lib/api"  // lib/api.ts → @/instrumentation → @deeptracer/nextjs → CRASH
 
-// GOOD — split server and client concerns into separate files
+// GOOD — split server and client concerns, or use universal for shared code
 // lib/api-server.ts  → imports from @/instrumentation (server-only)
-// lib/api-client.ts  → uses fetch() directly or createLogger from @deeptracer/nextjs/client
+// lib/api-client.ts  → uses fetch() directly or createLogger from @deeptracer/nextjs/universal
 ```
 
 **Thinking global-error.tsx can't report errors:**
@@ -388,13 +416,13 @@ import { createLogger } from "@deeptracer/nextjs/client"   // in non-React clien
 export { DeepTracerErrorPage as default } from "@deeptracer/nextjs/client"
 ```
 
-**Using `apiKey` instead of `secretKey`/`publicKey`:**
+**Using old `secretKey`/`publicKey` fields:**
 ```ts
-// BAD (v0.3.x API — no longer works)
-init({ apiKey: "dt_live_xxx", product: "web" })
-
-// GOOD (v0.4.x API)
+// BAD (pre-v0.5 API — no longer works)
 init({ secretKey: "dt_secret_xxx", service: "web" })
+
+// GOOD (v0.5+ API — single apiKey)
+init({ apiKey: "dt_xxx", service: "web" })
 ```
 
 ## Monorepo

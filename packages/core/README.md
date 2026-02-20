@@ -50,7 +50,7 @@ const logger = createLogger({
   service: "api",
   environment: "production",
   endpoint: "https://your-deeptracer.example.com",
-  secretKey: "dt_secret_xxx",
+  apiKey: "dt_xxx",
 })
 
 // Structured logging (batched -- sent in groups of 50 or every 5 seconds)
@@ -87,7 +87,7 @@ const logger = createLogger({
   service: "api",                // Service name within the product
   environment: "production",     // "production" or "staging"
   endpoint: "https://dt.co",     // DeepTracer ingestion endpoint URL
-  secretKey: "dt_secret_xxx",    // Server-side API key for authentication
+  apiKey: "dt_xxx",    // API key for authentication
 
   // Optional
   batchSize: 50,                 // Logs to buffer before sending (default: 50)
@@ -101,8 +101,7 @@ const logger = createLogger({
 | `service` | `string` | Yes | -- | Service name (e.g., `"api"`, `"worker"`, `"web"`) |
 | `environment` | `"production" \| "staging"` | Yes | -- | Deployment environment |
 | `endpoint` | `string` | Yes | -- | DeepTracer ingestion endpoint URL |
-| `secretKey` | `string` | Yes | -- | Server-side API key (prefix: `dt_secret_`) |
-| `publicKey` | `string` | No | -- | Client-side API key (prefix: `dt_public_`) |
+| `apiKey` | `string` | Yes | -- | API key (prefix: `dt_`) |
 | `batchSize` | `number` | No | `50` | Number of log entries to buffer before flushing |
 | `flushIntervalMs` | `number` | No | `5000` | Milliseconds between automatic flushes |
 | `debug` | `boolean` | No | `false` | When `true`, all log calls also print to the console |
@@ -120,7 +119,7 @@ const logger = createLogger({
   service: "api",
   environment: "production",
   endpoint: "https://your-deeptracer.example.com",
-  secretKey: "dt_secret_xxx",
+  apiKey: "dt_xxx",
 })
 ```
 
@@ -439,8 +438,7 @@ interface LoggerConfig {
   service: string
   environment: "production" | "staging"
   endpoint: string
-  secretKey: string
-  publicKey?: string
+  apiKey: string
   batchSize?: number          // default: 50
   flushIntervalMs?: number    // default: 5000
   debug?: boolean             // default: false
@@ -584,7 +582,7 @@ The transport layer sends data to four DeepTracer ingestion endpoints:
 | `POST /ingest/llm` | Immediate | LLM usage reports |
 
 All requests include:
-- `Authorization: Bearer <secretKey>` header
+- `Authorization: Bearer <apiKey>` header
 - `Content-Type: application/json` header
 - `service` and `environment` fields in the JSON body
 
