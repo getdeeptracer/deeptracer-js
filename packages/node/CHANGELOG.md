@@ -1,5 +1,11 @@
 # @deeptracer/node
 
+## 0.4.3
+
+### Patch Changes
+
+- @deeptracer/core@0.4.3
+
 ## 0.4.2
 
 ### Patch Changes
