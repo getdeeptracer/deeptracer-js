@@ -33,7 +33,7 @@ export const { register, onRequestError } = init({
 
 ## Server vs Client Imports
 
-> **This is the most common integration mistake.** Getting this wrong causes build failures.
+> **This is the most common integration mistake.** `@deeptracer/nextjs` (without `/client`) includes `import "server-only"` — importing it from a `"use client"` file gives a clear build error instead of a cryptic failure.
 
 | Context | Import From | Examples |
 |---------|------------|---------|
@@ -41,7 +41,7 @@ export const { register, onRequestError } = init({
 | `"use client"` components, React hooks, browser utilities | `@deeptracer/nextjs/client` | `DeepTracerProvider`, `useLogger`, `useDeepTracerErrorReporter`, `createLogger` |
 
 **Rules:**
-- **NEVER** import `@deeptracer/nextjs` (without `/client`) from a `"use client"` file — even transitively
+- **NEVER** import `@deeptracer/nextjs` (without `/client`) from a `"use client"` file — even transitively. The build will fail with a clear `server-only` error.
 - **NEVER** import a file that imports `@deeptracer/nextjs` from a `"use client"` file
 - For non-React client code (utility modules, localStorage helpers), use: `import { createLogger } from "@deeptracer/nextjs/client"`
 
@@ -250,7 +250,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 ### Other client exports
 
 - `DeepTracerErrorBoundary` — class-based error boundary for wrapping React trees (works without a provider)
-- `useLogger()` — hook to access Logger from context (requires `DeepTracerProvider`)
+- `useLogger()` — hook to access Logger from context (returns a no-op logger if no provider — safe during SSR/SSG)
 - `createLogger(config)` — create a standalone Logger for non-React client code (utility modules, localStorage helpers)
 
 ## Full Setup (Server + Client)
@@ -356,7 +356,7 @@ logger.setUser({ id: user.id, email: user.email })
 
 **Importing server code in client files:**
 ```ts
-// BAD — causes build failure
+// BAD — build fails with "server-only" error (intentional guard)
 "use client"
 import { logger } from "@/instrumentation" // instrumentation.ts imports @deeptracer/nextjs (server-only)
 

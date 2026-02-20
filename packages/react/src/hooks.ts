@@ -3,15 +3,19 @@
 import { useContext } from "react"
 import type { Logger } from "@deeptracer/browser"
 import { DeepTracerContext } from "./context"
+import { noopLogger } from "./noop-logger"
 
 /**
  * Access the DeepTracer Logger instance from React context.
  *
- * Must be used inside a `<DeepTracerProvider>`. Throws with a clear
- * error message if no provider is found.
+ * Returns a no-op logger (safe to call, does nothing) when:
+ * - Called during SSR/SSG (provider hasn't initialized yet)
+ * - No `<DeepTracerProvider>` is in the component tree
  *
- * @returns The Logger instance from the nearest DeepTracerProvider
- * @throws Error if called outside a DeepTracerProvider
+ * After hydration, once the provider's `useEffect` creates the real
+ * logger, React re-renders consumers and this hook returns the real instance.
+ *
+ * @returns The Logger from the nearest DeepTracerProvider, or a no-op fallback
  *
  * @example
  * ```tsx
@@ -46,11 +50,5 @@ import { DeepTracerContext } from "./context"
  */
 export function useLogger(): Logger {
   const logger = useContext(DeepTracerContext)
-  if (!logger) {
-    throw new Error(
-      "[@deeptracer/react] useLogger() must be used inside a <DeepTracerProvider>. " +
-        "Wrap your app with <DeepTracerProvider config={{...}}>.",
-    )
-  }
-  return logger
+  return logger ?? noopLogger
 }

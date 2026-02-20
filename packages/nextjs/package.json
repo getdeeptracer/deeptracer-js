@@ -59,7 +59,8 @@
     "@opentelemetry/core": "^2.0.0",
     "@opentelemetry/sdk-trace-base": "^2.0.0",
     "@opentelemetry/sdk-trace-node": "^2.0.0",
-    "@opentelemetry/instrumentation-undici": "^0.22.0"
+    "@opentelemetry/instrumentation-undici": "^0.22.0",
+    "server-only": "^0.0.1"
   },
   "peerDependencies": {
     "next": ">=15",
