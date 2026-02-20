@@ -190,7 +190,7 @@ import { DeepTracerErrorBoundary } from "@deeptracer/react"
 
 ### `useLogger()`
 
-Hook that returns the DeepTracer Logger from context. Throws with a clear error message if used outside a `<DeepTracerProvider>`.
+Hook that returns the DeepTracer Logger from context. **Safe to call anywhere** — returns a silent no-op logger when no `<DeepTracerProvider>` is in the tree or during SSR/SSG (before the provider initializes). After hydration, React re-renders and the hook returns the real logger automatically.
 
 ```tsx
 import { useLogger } from "@deeptracer/react"

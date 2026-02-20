@@ -161,11 +161,12 @@ Create app/global-error.tsx (same — works without a provider):
 export { DeepTracerErrorPage as default } from "@deeptracer/nextjs/client"
 
 CRITICAL RULES:
-- NEVER import @deeptracer/nextjs (without /client) from a "use client" file
+- NEVER import @deeptracer/nextjs (without /client) from a "use client" file — it has `import "server-only"` and will fail the build with a clear error
 - NEVER import a file that imports @deeptracer/nextjs from a "use client" file
 - Server code: import from @deeptracer/nextjs
 - Client code: import from @deeptracer/nextjs/client
 - For non-React client code: import { createLogger } from "@deeptracer/nextjs/client"
+- useLogger() is safe to call without a provider (returns a no-op logger during SSR/SSG)
 ```
 
 </details>
