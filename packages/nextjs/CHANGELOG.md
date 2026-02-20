@@ -1,5 +1,15 @@
 # @deeptracer/nextjs
 
+## 0.5.1
+
+### Patch Changes
+
+- e37e8c5: Migrate source code from secretKey/publicKey to single apiKey field. Server env var is now DEEPTRACER_KEY (was DEEPTRACER_SECRET_KEY). Client env var stays NEXT_PUBLIC_DEEPTRACER_KEY.
+- Updated dependencies [e37e8c5]
+  - @deeptracer/core@0.5.1
+  - @deeptracer/node@0.5.1
+  - @deeptracer/react@0.5.1
+
 ## 0.5.0
 
 ### Minor Changes
