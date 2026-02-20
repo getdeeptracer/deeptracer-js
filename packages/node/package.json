@@ -1,6 +1,6 @@
 {
   "name": "@deeptracer/node",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "DeepTracer SDK for Node.js and Bun — global error capture, console capture, Express & Hono middleware",
   "type": "module",
   "main": "dist/index.cjs",
@@ -38,7 +38,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@deeptracer/core": "0.4.3"
+    "@deeptracer/core": "0.5.0"
   },
   "devDependencies": {
     "@types/node": ">=18"

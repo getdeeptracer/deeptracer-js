@@ -1,5 +1,16 @@
 # @deeptracer/node
 
+## 0.5.0
+
+### Minor Changes
+
+- bdd3fc5: Add boundary-neutral `@deeptracer/nextjs/universal` entry point for shared code imported by both server and client. Migrate all docs from secretKey/publicKey to single apiKey field.
+
+### Patch Changes
+
+- Updated dependencies [bdd3fc5]
+  - @deeptracer/core@0.5.0
+
 ## 0.4.3
 
 ### Patch Changes
