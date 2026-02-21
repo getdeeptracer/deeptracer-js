@@ -1,5 +1,11 @@
 # @deeptracer/core
 
+## 0.6.0
+
+### Minor Changes
+
+- a952d51: Graceful degradation: init() returns a no-op logger instead of throwing when API key or endpoint is missing. Move noopLogger to @deeptracer/core so all packages can share it. This ensures builds (e.g. next build in CI) succeed even without DeepTracer env vars.
+
 ## 0.5.1
 
 ### Patch Changes
