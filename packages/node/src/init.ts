@@ -1,5 +1,5 @@
 import type { LoggerConfig, LogLevel } from "@deeptracer/core"
-import { createLogger, type Logger } from "@deeptracer/core"
+import { createLogger, noopLogger, type Logger } from "@deeptracer/core"
 import { captureGlobalErrors } from "./global-errors"
 
 /**
@@ -15,8 +15,12 @@ import { captureGlobalErrors } from "./global-errors"
  *
  * Explicit config values override environment variables.
  *
+ * If `apiKey` or `endpoint` is missing (no env vars, no explicit config),
+ * returns a **no-op logger** — all methods are safe to call but do nothing.
+ * This ensures `init()` never throws, so your app starts even without config.
+ *
  * @param config - Optional logger configuration (overrides env vars)
- * @returns A Logger instance with global error capture enabled
+ * @returns A Logger instance with global error capture enabled, or a no-op logger if config is missing
  *
  * @example
  * Zero-config (all from env vars):
@@ -69,15 +73,12 @@ export function init(config?: Partial<LoggerConfig>): Logger {
     beforeSend: config?.beforeSend,
   }
 
-  if (!resolved.apiKey) {
-    throw new Error(
-      "[@deeptracer/node] Missing API key. Set `DEEPTRACER_KEY` env var or pass `apiKey` to init().",
+  if (!resolved.apiKey || !resolved.endpoint) {
+    console.warn(
+      "[@deeptracer/node] Missing API key or endpoint. Logger is disabled. " +
+        "Set DEEPTRACER_KEY and DEEPTRACER_ENDPOINT env vars, or pass apiKey and endpoint to init().",
     )
-  }
-  if (!resolved.endpoint) {
-    throw new Error(
-      "[@deeptracer/node] Missing endpoint. Set `DEEPTRACER_ENDPOINT` env var or pass `endpoint` to init().",
-    )
+    return noopLogger
   }
 
   const logger = createLogger(resolved)

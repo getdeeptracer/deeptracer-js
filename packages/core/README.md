@@ -83,11 +83,10 @@ Pass a `LoggerConfig` object to `createLogger()`:
 
 ```ts
 const logger = createLogger({
-  // Required
-  service: "api",                // Service name within the product
-  environment: "production",     // "production" or "staging"
-  endpoint: "https://dt.co",     // DeepTracer ingestion endpoint URL
-  apiKey: "dt_xxx",    // API key for authentication
+  apiKey: "dt_xxx",              // API key (reads DEEPTRACER_KEY env var if omitted)
+  endpoint: "https://dt.co",     // Ingestion endpoint (reads DEEPTRACER_ENDPOINT if omitted)
+  service: "api",                // Service name (default: "server")
+  environment: "production",     // Deployment environment (default: NODE_ENV or "production")
 
   // Optional
   batchSize: 50,                 // Logs to buffer before sending (default: 50)
@@ -96,15 +95,17 @@ const logger = createLogger({
 })
 ```
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `service` | `string` | Yes | -- | Service name (e.g., `"api"`, `"worker"`, `"web"`) |
-| `environment` | `"production" \| "staging"` | Yes | -- | Deployment environment |
-| `endpoint` | `string` | Yes | -- | DeepTracer ingestion endpoint URL |
-| `apiKey` | `string` | Yes | -- | API key (prefix: `dt_`) |
-| `batchSize` | `number` | No | `50` | Number of log entries to buffer before flushing |
-| `flushIntervalMs` | `number` | No | `5000` | Milliseconds between automatic flushes |
-| `debug` | `boolean` | No | `false` | When `true`, all log calls also print to the console |
+> **Graceful degradation:** If `apiKey` or `endpoint` is missing, `createLogger()` prints a warning and runs in local-only mode — all methods work but no data is sent. The SDK never throws on missing config.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `apiKey` | `string` | `DEEPTRACER_KEY` env var | API key (prefix: `dt_`). If missing, runs in local-only mode (no data sent). |
+| `endpoint` | `string` | `DEEPTRACER_ENDPOINT` env var | DeepTracer ingestion endpoint URL. If missing, runs in local-only mode. |
+| `service` | `string` | `"server"` | Service name (e.g., `"api"`, `"worker"`, `"web"`) |
+| `environment` | `string` | `NODE_ENV` / `"production"` | Deployment environment |
+| `batchSize` | `number` | `50` | Number of log entries to buffer before flushing |
+| `flushIntervalMs` | `number` | `5000` | Milliseconds between automatic flushes |
+| `debug` | `boolean` | `false` | When `true`, all log calls also print to the console |
 
 ## API Reference
 

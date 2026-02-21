@@ -75,6 +75,8 @@ Initialize DeepTracer for Next.js. Returns `register` and `onRequestError` for d
 
 **Returns:** `{ register, onRequestError, logger }`
 
+If `apiKey` or `endpoint` is missing (no env vars, no explicit config), `init()` returns **no-op stubs** instead of throwing — `register` and `onRequestError` do nothing, `logger` is a silent no-op. This means your app builds and runs even without DeepTracer config (e.g., during `next build` in CI where env vars aren't set).
+
 | Property | Type | Description |
 |----------|------|-------------|
 | `register` | `() => void` | Called by Next.js on server start. Sets up error handlers. |
@@ -277,10 +279,10 @@ No `"use client"`, no `"server-only"` — safe to import from anywhere. Exports:
 
 ```bash
 # .env.local
-DEEPTRACER_KEY=dt_xxx            # Server — required
-DEEPTRACER_ENDPOINT=https://deeptracer.example.com  # Server — required
-NEXT_PUBLIC_DEEPTRACER_KEY=dt_xxx       # Client — required for provider
-NEXT_PUBLIC_DEEPTRACER_ENDPOINT=https://deeptracer.example.com  # Client — required for provider
+DEEPTRACER_KEY=dt_xxx            # Server — logger is a no-op if missing
+DEEPTRACER_ENDPOINT=https://deeptracer.example.com  # Server — logger is a no-op if missing
+NEXT_PUBLIC_DEEPTRACER_KEY=dt_xxx       # Client — provider warns if missing
+NEXT_PUBLIC_DEEPTRACER_ENDPOINT=https://deeptracer.example.com  # Client — provider warns if missing
 ```
 
 ### 2. Server instrumentation (required)
@@ -360,15 +362,15 @@ logger.setUser({ id: user.id, email: user.email })
 
 ## Environment Variables
 
-| Variable | Side | Required | Description |
-|----------|------|----------|-------------|
-| `DEEPTRACER_KEY` | Server | Yes | API key (prefix: `dt_`) |
-| `DEEPTRACER_ENDPOINT` | Server | Yes | Ingestion endpoint URL |
-| `DEEPTRACER_ENVIRONMENT` | Server | No | `"production"` / `"staging"` (default: `NODE_ENV`) |
-| `NEXT_PUBLIC_DEEPTRACER_KEY` | Client | Yes | Same API key (needs `NEXT_PUBLIC_` prefix for Next.js client exposure) |
-| `NEXT_PUBLIC_DEEPTRACER_ENDPOINT` | Client | Yes | Ingestion endpoint URL |
-| `NEXT_PUBLIC_DEEPTRACER_SERVICE` | Client | No | Service name (default: `"web"`) |
-| `NEXT_PUBLIC_DEEPTRACER_ENVIRONMENT` | Client | No | `"production"` / `"staging"` (default: `"production"`) |
+| Variable | Side | Description |
+|----------|------|-------------|
+| `DEEPTRACER_KEY` | Server | API key (prefix: `dt_`). If missing, logger is a silent no-op. |
+| `DEEPTRACER_ENDPOINT` | Server | Ingestion endpoint URL. If missing, logger is a silent no-op. |
+| `DEEPTRACER_ENVIRONMENT` | Server | `"production"` / `"staging"` (default: `NODE_ENV`) |
+| `NEXT_PUBLIC_DEEPTRACER_KEY` | Client | Same API key (needs `NEXT_PUBLIC_` prefix for Next.js client exposure) |
+| `NEXT_PUBLIC_DEEPTRACER_ENDPOINT` | Client | Ingestion endpoint URL |
+| `NEXT_PUBLIC_DEEPTRACER_SERVICE` | Client | Service name (default: `"web"`) |
+| `NEXT_PUBLIC_DEEPTRACER_ENVIRONMENT` | Client | `"production"` / `"staging"` (default: `"production"`) |
 
 ## Common Mistakes
 

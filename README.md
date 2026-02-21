@@ -79,16 +79,10 @@ npm install @deeptracer/nextjs
 ```ts
 // instrumentation.ts — the only file you need to create
 import { init } from "@deeptracer/nextjs"
-
-export const { register, onRequestError } = init({
-  service: "web",
-  environment: "production",
-  endpoint: "https://your-deeptracer.com",
-  apiKey: process.env.DEEPTRACER_KEY!,
-})
+export const { register, onRequestError } = init()
 ```
 
-All server-side errors (Server Components, Route Handlers, Middleware) are now captured automatically.
+Set `DEEPTRACER_KEY` and `DEEPTRACER_ENDPOINT` in `.env.local`. All server-side errors (Server Components, Route Handlers, Middleware) are now captured automatically. If env vars are missing (e.g., during `next build` in CI), `init()` gracefully returns a no-op — no errors, no crashes.
 
 ## Architecture
 

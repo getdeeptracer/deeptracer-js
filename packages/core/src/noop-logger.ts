@@ -1,4 +1,4 @@
-import type { Logger } from "@deeptracer/browser"
+import type { Logger } from "./logger"
 
 /**
  * No-op InactiveSpan — all methods are safe to call but do nothing.
@@ -30,8 +30,11 @@ const noop = () => {}
 /**
  * A Logger-compatible object where every method is a silent no-op.
  *
- * Used as a safe fallback by `useLogger()` when the DeepTracer provider
- * hasn't initialized yet (SSR/SSG) or isn't in the component tree.
+ * Returned by `init()` when API key or endpoint is missing, and by
+ * `useLogger()` when the DeepTracer provider hasn't initialized yet (SSR/SSG).
+ *
+ * This ensures the SDK never crashes your app — if config is missing,
+ * all logging calls silently do nothing.
  *
  * - No timers, no Transport, no network requests, no console output
  * - `withContext()` and `forRequest()` return the same noopLogger

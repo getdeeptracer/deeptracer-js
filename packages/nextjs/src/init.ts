@@ -1,4 +1,10 @@
-import { createLogger, type Logger, type LoggerConfig, type LogLevel } from "@deeptracer/core"
+import {
+  createLogger,
+  noopLogger,
+  type Logger,
+  type LoggerConfig,
+  type LogLevel,
+} from "@deeptracer/core"
 import { parseConsoleArgs } from "@deeptracer/core/internal"
 import {
   DeepTracerSpanProcessor,
@@ -114,8 +120,13 @@ export interface InitResult {
  *
  * Explicit config values override environment variables.
  *
+ * If `apiKey` or `endpoint` is missing (no env vars, no explicit config),
+ * returns **no-op stubs** — `register` and `onRequestError` do nothing,
+ * `logger` is a silent no-op. This ensures `init()` never throws, so
+ * `next build` succeeds even without DeepTracer env vars in CI.
+ *
  * @param config - Optional configuration (overrides env vars)
- * @returns Object with `register`, `onRequestError`, and `logger`
+ * @returns Object with `register`, `onRequestError`, and `logger` (no-op if config missing)
  *
  * @example
  * Zero-config — the entire `instrumentation.ts` file:
@@ -153,15 +164,16 @@ export function init(config?: NextjsConfig): InitResult {
     beforeSend: config?.beforeSend,
   }
 
-  if (!resolved.apiKey) {
-    throw new Error(
-      "[@deeptracer/nextjs] Missing API key. Set `DEEPTRACER_KEY` env var or pass `apiKey` to init().",
+  if (!resolved.apiKey || !resolved.endpoint) {
+    console.warn(
+      "[@deeptracer/nextjs] Missing API key or endpoint. Logger is disabled. " +
+        "Set DEEPTRACER_KEY and DEEPTRACER_ENDPOINT env vars, or pass apiKey and endpoint to init().",
     )
-  }
-  if (!resolved.endpoint) {
-    throw new Error(
-      "[@deeptracer/nextjs] Missing endpoint. Set `DEEPTRACER_ENDPOINT` env var or pass `endpoint` to init().",
-    )
+    return {
+      register: async () => {},
+      onRequestError: async () => {},
+      logger: noopLogger,
+    }
   }
 
   const logger = createLogger(resolved)

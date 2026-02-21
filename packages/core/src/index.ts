@@ -1,4 +1,5 @@
 export { createLogger, Logger } from "./logger"
+export { noopLogger } from "./noop-logger"
 export { SDK_VERSION, SDK_NAME } from "./version"
 export type {
   LoggerConfig,
