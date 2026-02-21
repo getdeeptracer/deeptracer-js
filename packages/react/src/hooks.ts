@@ -2,8 +2,8 @@
 
 import { useContext } from "react"
 import type { Logger } from "@deeptracer/browser"
+import { noopLogger } from "@deeptracer/browser"
 import { DeepTracerContext } from "./context"
-import { noopLogger } from "./noop-logger"
 
 /**
  * Access the DeepTracer Logger instance from React context.

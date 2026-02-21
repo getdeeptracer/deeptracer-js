@@ -81,16 +81,16 @@ const logger = init({
 **Parameters:**
 - `config: LoggerConfig` -- Logger configuration. See [`@deeptracer/core` Configuration](https://github.com/getdeeptracer/deeptracer-js/tree/main/packages/core#configuration) for the full reference.
 
-**Returns:** `Logger` -- A fully configured logger instance with global error capture active.
+**Returns:** `Logger` -- A fully configured logger instance with global error capture active. If `apiKey` or `endpoint` is missing, returns a **no-op logger** (all methods are safe to call but do nothing) and prints a warning to the console. This means `init()` never throws — your app starts even without DeepTracer config.
 
 **Config quick reference:**
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `service` | `string` | Yes | -- | Service name (e.g., `"api"`) |
-| `environment` | `"production" \| "staging"` | Yes | -- | Deployment environment |
-| `endpoint` | `string` | Yes | -- | DeepTracer ingestion endpoint URL |
-| `apiKey` | `string` | Yes | -- | API key (prefix: `dt_`) |
+| `apiKey` | `string` | -- | `DEEPTRACER_KEY` env var | API key (prefix: `dt_`). No-op logger if missing. |
+| `endpoint` | `string` | -- | `DEEPTRACER_ENDPOINT` env var | DeepTracer ingestion endpoint URL. No-op logger if missing. |
+| `service` | `string` | No | auto-detected | Service name (e.g., `"api"`) |
+| `environment` | `string` | No | `NODE_ENV` / `"production"` | Deployment environment |
 | `batchSize` | `number` | No | `50` | Log entries to buffer before flushing |
 | `flushIntervalMs` | `number` | No | `5000` | Milliseconds between automatic flushes |
 | `debug` | `boolean` | No | `false` | Mirror all logs to local console |

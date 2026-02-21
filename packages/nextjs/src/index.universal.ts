@@ -7,7 +7,13 @@
 // For server-only code (instrumentation.ts, API routes): import from "@deeptracer/nextjs"
 // For client-only code ("use client" components):        import from "@deeptracer/nextjs/client"
 
-export { createLogger, Logger, type LoggerConfig, type LogLevel } from "@deeptracer/core"
+export {
+  createLogger,
+  noopLogger,
+  Logger,
+  type LoggerConfig,
+  type LogLevel,
+} from "@deeptracer/core"
 export type {
   LogEntry,
   ErrorReport,
