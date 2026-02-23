@@ -16,6 +16,14 @@ export default defineConfig([
     external,
   },
   {
+    entry: ["src/index.edge.ts"],
+    format: ["esm", "cjs"],
+    dts: { compilerOptions: { composite: false } },
+    clean: false,
+    target: "es2022",
+    external,
+  },
+  {
     entry: ["src/index.client.ts"],
     format: ["esm", "cjs"],
     dts: { compilerOptions: { composite: false } },
