@@ -41,7 +41,7 @@
     "@deeptracer/core": "0.6.2"
   },
   "devDependencies": {
-    "@types/node": ">=18"
+    "@types/node": ">=25"
   },
   "scripts": {
     "build": "tsup",
