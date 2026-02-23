@@ -33,6 +33,11 @@
       "types": "./dist/index.universal.d.ts",
       "import": "./dist/index.universal.js",
       "require": "./dist/index.universal.cjs"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js",
+      "require": "./dist/config.cjs"
     }
   },
   "files": [

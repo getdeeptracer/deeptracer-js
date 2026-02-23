@@ -12,9 +12,22 @@ npm install @deeptracer/nextjs
 
 **Peer dependencies:** `next >=14`, `react >=18`, `react-dom >=18`
 
-## Quick Start (1 file, 3 lines)
+## Quick Start (2 files, ~5 lines)
 
-Set `DEEPTRACER_KEY` and `DEEPTRACER_ENDPOINT` in `.env.local`, then create `instrumentation.ts` in your project root:
+Set `DEEPTRACER_KEY` and `DEEPTRACER_ENDPOINT` in `.env.local`, then:
+
+**1. Wrap your Next.js config:**
+
+```ts
+// next.config.ts
+import { withDeepTracer } from "@deeptracer/nextjs/config"
+
+export default withDeepTracer({
+  // your existing Next.js config
+})
+```
+
+**2. Create `instrumentation.ts` in your project root:**
 
 ```ts
 import { init } from "@deeptracer/nextjs"
@@ -275,7 +288,26 @@ No `"use client"`, no `"server-only"` — safe to import from anywhere. Exports:
 
 ## Full Setup (Server + Client)
 
-### 1. Environment variables
+### 1. Next.js config
+
+Wrap your config with `withDeepTracer()` to prevent OpenTelemetry packages from being bundled into client-side chunks:
+
+```ts
+// next.config.ts
+import { withDeepTracer } from "@deeptracer/nextjs/config"
+
+export default withDeepTracer({
+  // your existing config
+})
+```
+
+Works with both Webpack and Turbopack. If you use other config wrappers (e.g., Sentry), compose them:
+
+```ts
+export default withDeepTracer(withSentryConfig({ reactStrictMode: true }))
+```
+
+### 2. Environment variables
 
 ```bash
 # .env.local
@@ -285,7 +317,7 @@ NEXT_PUBLIC_DEEPTRACER_KEY=dt_xxx       # Client — provider warns if missing
 NEXT_PUBLIC_DEEPTRACER_ENDPOINT=https://deeptracer.example.com  # Client — provider warns if missing
 ```
 
-### 2. Server instrumentation (required)
+### 3. Server instrumentation (required)
 
 ```ts
 // instrumentation.ts — creates logger, captures all server errors
@@ -299,7 +331,7 @@ export const logger = deeptracer.logger
 
 `init()` reads `DEEPTRACER_KEY` and `DEEPTRACER_ENDPOINT` from env vars automatically. Pass explicit config only if you need to override.
 
-### 3. Client provider (recommended)
+### 4. Client provider (recommended)
 
 ```tsx
 // app/layout.tsx — zero-config, reads NEXT_PUBLIC_DEEPTRACER_* env vars
@@ -316,7 +348,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-### 4. Error pages (recommended)
+### 5. Error pages (recommended)
 
 ```tsx
 // app/error.tsx
@@ -330,7 +362,7 @@ export { DeepTracerErrorPage as default } from "@deeptracer/nextjs/client"
 export { DeepTracerErrorPage as default } from "@deeptracer/nextjs/client"
 ```
 
-### 5. Using the server logger
+### 6. Using the server logger
 
 The `logger` export from `instrumentation.ts` is a full `Logger` instance for server-side code:
 
