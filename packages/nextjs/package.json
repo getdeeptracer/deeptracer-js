@@ -10,12 +10,12 @@
     ".": {
       "types": "./dist/index.types.d.ts",
       "edge-light": {
-        "import": "./dist/index.server.js",
-        "require": "./dist/index.server.cjs"
+        "import": "./dist/index.edge.js",
+        "require": "./dist/index.edge.cjs"
       },
       "worker": {
-        "import": "./dist/index.server.js",
-        "require": "./dist/index.server.cjs"
+        "import": "./dist/index.edge.js",
+        "require": "./dist/index.edge.cjs"
       },
       "node": {
         "import": "./dist/index.server.js",

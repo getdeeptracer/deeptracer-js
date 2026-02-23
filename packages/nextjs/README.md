@@ -44,6 +44,8 @@ export const { register, onRequestError } = init({
 })
 ```
 
+Works on both **Node.js** and **Edge** runtimes. On Edge, OpenTelemetry auto-tracing is automatically disabled (Edge doesn't support Node.js built-ins). Logging and error capture work identically on both runtimes.
+
 ## Server vs Client Imports
 
 > **This is the most common integration mistake.** `@deeptracer/nextjs` (without `/client`) includes `import "server-only"` — importing it from a `"use client"` file gives a clear build error instead of a cryptic failure.
