@@ -1,5 +1,11 @@
 # @deeptracer/react
 
+## 0.6.2
+
+### Patch Changes
+
+- @deeptracer/browser@0.6.2
+
 ## 0.6.1
 
 ### Patch Changes
