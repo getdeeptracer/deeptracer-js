@@ -1,6 +1,6 @@
 {
   "name": "@deeptracer/nextjs",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "DeepTracer Next.js integration — automatic server-side error capture with one-file setup",
   "type": "module",
   "main": "dist/index.server.cjs",
@@ -33,6 +33,11 @@
       "types": "./dist/index.universal.d.ts",
       "import": "./dist/index.universal.js",
       "require": "./dist/index.universal.cjs"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js",
+      "require": "./dist/config.cjs"
     }
   },
   "files": [
@@ -57,9 +62,9 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@deeptracer/core": "0.6.0",
-    "@deeptracer/node": "0.6.0",
-    "@deeptracer/react": "0.6.0",
+    "@deeptracer/core": "0.6.1",
+    "@deeptracer/node": "0.6.1",
+    "@deeptracer/react": "0.6.1",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/core": "^2.0.0",
     "@opentelemetry/sdk-trace-base": "^2.0.0",

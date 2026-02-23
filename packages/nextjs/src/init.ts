@@ -298,12 +298,16 @@ async function setupOtelTracing(
     process.env.NEXT_OTEL_FETCH_DISABLED = "1"
 
     // Dynamic imports — only executed on Node.js runtime, never edge.
-    // These packages are externalized by tsup (listed in package.json dependencies).
+    // webpackIgnore tells Webpack to skip these during client-side dependency
+    // analysis. Without it, Webpack walks the import graph and chokes on
+    // Node.js built-ins like `diagnostics_channel` inside the OTel packages.
+    // For Turbopack, the `withDeepTracer()` config wrapper adds these to
+    // `serverExternalPackages` instead (see @deeptracer/nextjs/config).
     const [otelApi, otelNode, otelCore, undiciInstr] = await Promise.all([
-      import("@opentelemetry/api"),
-      import("@opentelemetry/sdk-trace-node"),
-      import("@opentelemetry/core"),
-      import("@opentelemetry/instrumentation-undici"),
+      import(/* webpackIgnore: true */ "@opentelemetry/api"),
+      import(/* webpackIgnore: true */ "@opentelemetry/sdk-trace-node"),
+      import(/* webpackIgnore: true */ "@opentelemetry/core"),
+      import(/* webpackIgnore: true */ "@opentelemetry/instrumentation-undici"),
     ])
 
     const otelRuntime: OtelRuntime = {
