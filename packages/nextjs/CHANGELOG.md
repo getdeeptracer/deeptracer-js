@@ -1,5 +1,16 @@
 # @deeptracer/nextjs
 
+## 0.6.1
+
+### Patch Changes
+
+- 4000125: Fix OpenTelemetry packages leaking into client bundle
+
+  Add `withDeepTracer()` config wrapper (`@deeptracer/nextjs/config`) that adds OTel packages to `serverExternalPackages`, preventing Webpack/Turbopack from bundling Node.js-only modules like `diagnostics_channel` into client chunks. Also add `/* webpackIgnore: true */` to dynamic OTel imports as defense-in-depth for Webpack.
+  - @deeptracer/core@0.6.1
+  - @deeptracer/node@0.6.1
+  - @deeptracer/react@0.6.1
+
 ## 0.6.0
 
 ### Minor Changes
