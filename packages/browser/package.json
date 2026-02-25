@@ -1,6 +1,6 @@
 {
   "name": "@deeptracer/browser",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "DeepTracer SDK for browsers — window error handlers, fetch interceptor",
   "type": "module",
   "main": "dist/index.cjs",
@@ -33,7 +33,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@deeptracer/core": "0.6.3"
+    "@deeptracer/core": "0.6.4"
   },
   "scripts": {
     "build": "tsup",
