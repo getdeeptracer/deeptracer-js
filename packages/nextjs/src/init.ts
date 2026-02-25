@@ -293,8 +293,9 @@ async function setupOtelTracing(
   try {
     if (isAlreadyRegistered()) return
 
-    // Disable Next.js built-in fetch OTel spans — our undici instrumentation
-    // creates richer spans with W3C traceparent propagation.
+    // Disable Next.js built-in fetch OTel spans — we instrument globalThis.fetch
+    // directly below, which avoids the UndiciInstrumentation Request-constructor patch
+    // that breaks new Request(existingRequest, options) in third-party handlers.
     process.env.NEXT_OTEL_FETCH_DISABLED = "1"
 
     // Dynamic imports — only executed on Node.js runtime, never edge.
@@ -303,11 +304,10 @@ async function setupOtelTracing(
     // Node.js built-ins like `diagnostics_channel` inside the OTel packages.
     // For Turbopack, the `withDeepTracer()` config wrapper adds these to
     // `serverExternalPackages` instead (see @deeptracer/nextjs/config).
-    const [otelApi, otelNode, otelCore, undiciInstr] = await Promise.all([
+    const [otelApi, otelNode, otelCore] = await Promise.all([
       import(/* webpackIgnore: true */ "@opentelemetry/api"),
       import(/* webpackIgnore: true */ "@opentelemetry/sdk-trace-node"),
       import(/* webpackIgnore: true */ "@opentelemetry/core"),
-      import(/* webpackIgnore: true */ "@opentelemetry/instrumentation-undici"),
     ])
 
     const otelRuntime: OtelRuntime = {
@@ -361,27 +361,117 @@ async function setupOtelTracing(
       })
       provider.register()
 
-      // Register undici instrumentation for automatic fetch tracing with
-      // W3C traceparent propagation. Must be constructed AFTER provider.register()
-      // since it reads from the global TracerProvider on construction.
-      const ingestOrigin = new URL(resolved.endpoint!).origin
+      // Wrap globalThis.fetch to create outgoing HTTP spans and propagate W3C
+      // traceparent — matching what @vercel/otel and Sentry v8 do.
+      //
+      // We deliberately avoid UndiciInstrumentation because it patches the global
+      // Request constructor, causing:
+      //   TypeError: Cannot read private member #state from an object whose class
+      //   did not declare it
+      // when any code does new Request(existingRequest, options) — the standard
+      // copy-constructor pattern used by Better Auth, Remix adapters, and any
+      // middleware that clones requests with modified headers.
+      if (typeof globalThis.fetch === "function") {
+        const originalFetch = globalThis.fetch.bind(globalThis)
+        const ingestOrigin = new URL(resolved.endpoint!).origin
+        const tracer = otelApi.trace.getTracer("@deeptracer/nextjs")
 
-      new undiciInstr.UndiciInstrumentation({
-        ignoreRequestHook: (request: { origin: string; path: string }) => {
-          // Exclude DeepTracer's own ingestion endpoint (prevent circular tracing)
-          if (request.origin === ingestOrigin) return true
-          // If user specified targets, only propagate to those
-          if (tracePropagationTargets && tracePropagationTargets.length > 0) {
-            const fullUrl = `${request.origin}${request.path}`
-            return !tracePropagationTargets.some((target) =>
-              typeof target === "string"
-                ? request.origin === target || request.origin.startsWith(target)
-                : target.test(fullUrl),
-            )
+        globalThis.fetch = async function patchedFetch(
+          input: Parameters<typeof globalThis.fetch>[0],
+          init?: Parameters<typeof globalThis.fetch>[1],
+        ): ReturnType<typeof globalThis.fetch> {
+          // Determine URL and HTTP method from input
+          let url: string
+          let method: string
+          if (typeof input === "string") {
+            url = input
+            method = init?.method ?? "GET"
+          } else if (input instanceof URL) {
+            url = input.href
+            method = init?.method ?? "GET"
+          } else {
+            url = (input as Request).url
+            method = init?.method ?? (input as Request).method ?? "GET"
           }
-          return false
-        },
-      })
+          method = method.toUpperCase()
+
+          // Parse origin — skip on malformed URLs
+          let origin: string
+          try {
+            origin = new URL(url).origin
+          } catch {
+            return originalFetch(input, init)
+          }
+
+          // Never instrument DeepTracer's own ingestion endpoint
+          if (origin === ingestOrigin) {
+            return originalFetch(input, init)
+          }
+
+          // Respect tracePropagationTargets — if set, only instrument matching URLs
+          if (tracePropagationTargets && tracePropagationTargets.length > 0) {
+            const matches = tracePropagationTargets.some((target) =>
+              typeof target === "string"
+                ? origin === target || origin.startsWith(target)
+                : target.test(url),
+            )
+            if (!matches) {
+              return originalFetch(input, init)
+            }
+          }
+
+          // Create a CLIENT span for this outgoing request.
+          // startActiveSpan sets this span as the active span in the async context,
+          // so any nested fetch calls within the response handler will correctly
+          // be recorded as children of this span.
+          return tracer.startActiveSpan(
+            `fetch ${method} ${new URL(url).hostname}`,
+            {
+              kind: otelApi.SpanKind.CLIENT,
+              attributes: {
+                "http.method": method,
+                "http.url": url,
+                "http.host": new URL(url).hostname,
+              },
+            },
+            async (span) => {
+              // Inject W3C traceparent from the CHILD span's context — not the
+              // parent — so the downstream service correlates back to this call,
+              // not the route handler that initiated it.
+              const ctx = span.spanContext()
+              const traceFlags = ctx.traceFlags.toString(16).padStart(2, "0")
+              const traceparent = `00-${ctx.traceId}-${ctx.spanId}-${traceFlags}`
+
+              // Read headers from input without reconstructing the Request object.
+              // Accessing .headers on an existing Request is safe — it's a property
+              // getter, not a private field. Only new Request(existingReq, ...) is
+              // dangerous (the copy-constructor that triggers the #state crash).
+              const existingHeaders =
+                typeof input === "object" && !(input instanceof URL) && "headers" in input
+                  ? (input as Request).headers
+                  : init?.headers
+              const mergedHeaders = new Headers(existingHeaders as HeadersInit | undefined)
+              if (!mergedHeaders.has("traceparent")) {
+                mergedHeaders.set("traceparent", traceparent)
+              }
+
+              try {
+                const response = await originalFetch(input, { ...init, headers: mergedHeaders })
+                span.setAttribute("http.status_code", response.status)
+                span.setStatus({
+                  code: response.ok ? otelApi.SpanStatusCode.OK : otelApi.SpanStatusCode.ERROR,
+                })
+                span.end()
+                return response
+              } catch (err) {
+                span.setStatus({ code: otelApi.SpanStatusCode.ERROR })
+                span.end()
+                throw err
+              }
+            },
+          )
+        } as typeof globalThis.fetch
+      }
     }
 
     markRegistered()
