@@ -81,8 +81,24 @@ export interface InitResult {
    * Called by Next.js when the server starts.
    * Sets up global error capture, console interception, and OpenTelemetry span processing.
    * Re-export this from your `instrumentation.ts`.
+   *
+   * Returns a Promise — if you wrap it in a custom `register()` function,
+   * make sure to `await` it so OpenTelemetry tracing and global error capture
+   * are fully initialised before your server starts handling requests.
+   *
+   * @example
+   * ```ts
+   * // instrumentation.ts — custom wrapper with additional setup
+   * export async function register() {
+   *   await deeptracer.register()  // ← must be awaited
+   *   if (process.env.NEXT_RUNTIME === "nodejs") {
+   *     const { PrismaInstrumentation } = await import("@prisma/instrumentation")
+   *     // register additional instrumentations...
+   *   }
+   * }
+   * ```
    */
-  register: () => void
+  register: () => Promise<void>
   /**
    * Called by Next.js on every server-side error (Server Components,
    * Route Handlers, Middleware). Captures errors and sends them to DeepTracer.

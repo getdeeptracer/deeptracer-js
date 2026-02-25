@@ -380,6 +380,32 @@ export const logger = deeptracer.logger
 
 `init()` reads `DEEPTRACER_KEY` and `DEEPTRACER_ENDPOINT` from env vars automatically. Pass explicit config only if you need to override.
 
+**Custom `register()` — adding your own startup logic:**
+
+If you need to run additional setup alongside DeepTracer (e.g., Prisma instrumentation, env validation), write your own `register()` and call `deeptracer.register()` inside it. **You must `await` it** — it's async and sets up OpenTelemetry tracing:
+
+```ts
+// instrumentation.ts — custom register wrapping deeptracer's
+import { init } from "@deeptracer/nextjs"
+
+const deeptracer = init({ service: "web" })
+
+export const { onRequestError } = deeptracer
+export const logger = deeptracer.logger
+
+export async function register() {
+  await deeptracer.register()  // ← must be awaited (async, sets up OTel + global error capture)
+
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { registerInstrumentations } = await import("@opentelemetry/instrumentation")
+    const { PrismaInstrumentation } = await import("@prisma/instrumentation")
+    registerInstrumentations({ instrumentations: [new PrismaInstrumentation()] })
+  }
+}
+```
+
+Without `await`, OpenTelemetry tracing and the `globalThis.fetch` patch are set up in the background — they may not be ready when the first request arrives.
+
 ### 4. Client provider (recommended)
 
 ```tsx
@@ -524,6 +550,32 @@ export const POST = async (req: Request) => {
 
 // GOOD — withRouteHandler handles tracing, error capture, and flush
 export const POST = withRouteHandler(logger, "POST /api/auth/[...all]", withTrustedOrigin(authPOST))
+```
+
+**Cloning a `Request` object with `new Request(existingReq, options)` crashes on Next.js 16:**
+```ts
+// WHY THIS CRASHES:
+// Next.js 16's internal Request objects use a private #state field.
+// The copy constructor (new Request(existing, options)) tries to access #state
+// on an object whose class did not declare it → TypeError.
+// This is true regardless of which SDK or middleware you use.
+
+// BAD — crashes with: TypeError: Cannot read private member #state
+const headers = new Headers(req.headers)
+headers.set("origin", "https://example.com")
+req = new Request(req, { headers })  // ← do not use the copy constructor
+
+// GOOD — use a Proxy to override specific properties without touching #state
+const headers = new Headers(req.headers)
+headers.set("origin", "https://example.com")
+req = new Proxy(req, {
+  get(target, prop, receiver) {
+    if (prop === "headers") return headers
+    const value = Reflect.get(target, prop, receiver)
+    return typeof value === "function" ? value.bind(target) : value
+  },
+})
+// ↑ Intercepts .headers access without ever touching #state ✓
 ```
 
 **Logs from third-party callbacks silently disappear — all logger imports must come from the same root:**
