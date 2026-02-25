@@ -1,6 +1,6 @@
 {
   "name": "@deeptracer/ai",
-  "version": "0.6.4",
+  "version": "0.7.0",
   "description": "DeepTracer AI SDK wrappers — automatic LLM usage tracking for Vercel AI SDK, OpenAI, and Anthropic",
   "type": "module",
   "main": "dist/index.cjs",
@@ -36,7 +36,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@deeptracer/core": "0.6.4"
+    "@deeptracer/core": "0.7.0"
   },
   "peerDependencies": {
     "ai": ">=3",
