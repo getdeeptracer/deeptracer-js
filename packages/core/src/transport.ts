@@ -33,7 +33,10 @@ export class Transport {
   private warnedLabels = new Set<string>()
 
   constructor(
-    private config: Pick<LoggerConfig, "endpoint" | "apiKey" | "service" | "environment" | "waitUntil">,
+    private config: Pick<
+      LoggerConfig,
+      "endpoint" | "apiKey" | "service" | "environment" | "waitUntil"
+    >,
   ) {
     const hasKey = !!config.apiKey
     const hasEndpoint = !!config.endpoint
