@@ -392,7 +392,14 @@ export class Logger {
 
   /** Create a context-scoped logger. All logs include the context name. Gets an independent copy of state. */
   withContext(name: string): Logger {
-    return new Logger(this.config, name, this.requestMeta, cloneState(this.state), this.batcher, this.transport)
+    return new Logger(
+      this.config,
+      name,
+      this.requestMeta,
+      cloneState(this.state),
+      this.batcher,
+      this.transport,
+    )
   }
 
   /** Create a request-scoped logger that extracts trace context from headers. Gets an independent copy of state. */
@@ -595,11 +602,25 @@ export class Logger {
         this.transport.sendTrace(hookResult.data as SpanData)
       },
       startSpan: <T>(childOp: string, fn: (span: Span) => T): T => {
-        const childLogger = new Logger(this.config, this.contextName, childMeta, this.state, this.batcher, this.transport)
+        const childLogger = new Logger(
+          this.config,
+          this.contextName,
+          childMeta,
+          this.state,
+          this.batcher,
+          this.transport,
+        )
         return childLogger.startSpan(childOp, fn)
       },
       startInactiveSpan: (childOp: string): InactiveSpan => {
-        const childLogger = new Logger(this.config, this.contextName, childMeta, this.state, this.batcher, this.transport)
+        const childLogger = new Logger(
+          this.config,
+          this.contextName,
+          childMeta,
+          this.state,
+          this.batcher,
+          this.transport,
+        )
         return childLogger.startInactiveSpan(childOp)
       },
       getHeaders: () => {
