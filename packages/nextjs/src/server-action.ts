@@ -46,15 +46,19 @@ export async function withServerAction<T>(
   const name = typeof nameOrFn === "string" ? nameOrFn : nameOrFn.name || "anonymous"
   const fn = typeof nameOrFn === "string" ? maybeFn! : nameOrFn
 
-  return logger.startSpan(`server-action:${name}`, async () => {
-    try {
-      return await fn()
-    } catch (error) {
-      logger.captureError(error, {
-        severity: "high",
-        context: { source: "server-action", action: name },
-      })
-      throw error
-    }
-  })
+  try {
+    return await logger.startSpan(`server-action:${name}`, async () => {
+      try {
+        return await fn()
+      } catch (error) {
+        logger.captureError(error, {
+          severity: "high",
+          context: { source: "server-action", action: name },
+        })
+        throw error
+      }
+    })
+  } finally {
+    await logger.flush()
+  }
 }

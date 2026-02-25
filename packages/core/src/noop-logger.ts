@@ -78,6 +78,6 @@ export const noopLogger: Logger = {
     fn,
 
   // Lifecycle — resolve immediately
-  flush: noop,
+  flush: () => Promise.resolve(),
   destroy: () => Promise.resolve(),
 } as unknown as Logger

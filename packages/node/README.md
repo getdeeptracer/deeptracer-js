@@ -92,7 +92,7 @@ const logger = init({
 | `service` | `string` | No | auto-detected | Service name (e.g., `"api"`) |
 | `environment` | `string` | No | `NODE_ENV` / `"production"` | Deployment environment |
 | `batchSize` | `number` | No | `50` | Log entries to buffer before flushing |
-| `flushIntervalMs` | `number` | No | `5000` | Milliseconds between automatic flushes |
+| `flushIntervalMs` | `number` | No | `5000 (200 in serverless environments — auto-detected via VERCEL or AWS_LAMBDA_FUNCTION_NAME)` | Milliseconds between automatic flushes |
 | `debug` | `boolean` | No | `false` | Mirror all logs to local console |
 
 ---

@@ -130,6 +130,21 @@ describe("Batcher", () => {
     batcher.destroy()
   })
 
+  it("defaults to 200ms interval in serverless environments", () => {
+    vi.stubEnv("VERCEL", "1")
+    const onFlush = vi.fn()
+    const batcher = new Batcher({}, onFlush)
+
+    batcher.add(makeEntry("serverless log"))
+    expect(onFlush).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(200)
+    expect(onFlush).toHaveBeenCalledOnce()
+
+    batcher.destroy()
+    vi.unstubAllEnvs()
+  })
+
   it("onFlush receives entries and buffer is cleared", () => {
     const onFlush = vi.fn()
     const batcher = new Batcher({ batchSize: 2 }, onFlush)

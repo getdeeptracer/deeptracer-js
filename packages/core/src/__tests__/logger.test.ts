@@ -331,6 +331,85 @@ describe("Logger", () => {
     })
   })
 
+  describe("shared transport", () => {
+    it("withContext child shares batcher with parent", async () => {
+      const logger = createLogger(testConfig())
+      const child = logger.withContext("child-ctx")
+
+      child.info("child log message")
+      await flushAll()
+
+      const logCall = fetchMock.calls.find((c) => c.url.includes("/ingest/logs"))
+      expect(logCall).toBeDefined()
+      expect(logCall!.body.logs[0].message).toBe("child log message")
+
+      await logger.destroy()
+    })
+
+    it("flush() returns Promise that resolves after drain", async () => {
+      // Mock fetch to hang indefinitely — resolve it manually
+      let resolveFetch!: () => void
+      const hangingFetch = vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveFetch = () => resolve(new Response(null, { status: 200 }))
+          }),
+      )
+      vi.stubGlobal("fetch", hangingFetch)
+
+      const logger = createLogger(testConfig())
+      logger.info("pending log")
+      // Advance timer to trigger batcher flush (which starts the fetch)
+      await vi.advanceTimersByTimeAsync(6000)
+
+      // flush() should be pending while fetch is hanging
+      let flushed = false
+      const flushPromise = logger.flush().then(() => {
+        flushed = true
+      })
+
+      // Resolve the hanging fetch
+      resolveFetch()
+      await flushPromise
+
+      expect(flushed).toBe(true)
+    })
+
+    it("destroy() on child does not stop parent flush timer", async () => {
+      const logger = createLogger(testConfig())
+      const child = logger.withContext("child-ctx")
+
+      // Destroy child — should not stop root's timer
+      await child.destroy()
+
+      // Root should still flush on its interval
+      logger.info("root log after child destroy")
+      await flushAll()
+
+      const logCall = fetchMock.calls.find((c) => c.url.includes("/ingest/logs"))
+      expect(logCall).toBeDefined()
+      expect(logCall!.body.logs[0].message).toBe("root log after child destroy")
+
+      await logger.destroy()
+    })
+
+    it("forRequest() child shares transport", async () => {
+      const logger = createLogger(testConfig())
+      const request = new Request("https://example.com/api/test")
+      const child = logger.forRequest(request)
+
+      child.info("request log message")
+      // flush parent — child shares same batcher+transport
+      await logger.flush()
+
+      const logCall = fetchMock.calls.find((c) => c.url.includes("/ingest/logs"))
+      expect(logCall).toBeDefined()
+      expect(logCall!.body.logs[0].message).toBe("request log message")
+
+      await logger.destroy()
+    })
+  })
+
   describe("local-only mode", () => {
     // Logger uses _originalConsole.warn (not console.warn) to avoid
     // infinite loops when captureConsole is active. Spy on that instead.

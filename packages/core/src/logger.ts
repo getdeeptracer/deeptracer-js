@@ -101,6 +101,7 @@ export const _originalConsole = {
 export class Logger {
   private batcher: Batcher
   private transport: Transport
+  private readonly isRoot: boolean
   private effectiveLevel: number
   protected contextName?: string
   protected config: LoggerConfig
@@ -117,38 +118,46 @@ export class Logger {
     contextName?: string,
     requestMeta?: { trace_id?: string; span_id?: string; request_id?: string; vercel_id?: string },
     state?: LoggerState,
+    sharedBatcher?: Batcher,
+    sharedTransport?: Transport,
   ) {
     this.config = config
     this.contextName = contextName
     this.requestMeta = requestMeta
     this.state = state ?? createLoggerState(config.maxBreadcrumbs ?? 20)
+    this.isRoot = !sharedBatcher
 
     // Validation warnings — fail gracefully, never crash.
     // Missing key or endpoint = local-only mode (logging methods still work, nothing is sent).
-    const hasKey = !!config.apiKey
-    const hasEndpoint = !!config.endpoint
-    if (!hasKey && !hasEndpoint) {
-      _originalConsole.warn(
-        "[@deeptracer/core] No API key or endpoint configured. Running in local-only mode " +
-          "(logging methods work, but events are not sent). " +
-          "Set DEEPTRACER_KEY and DEEPTRACER_ENDPOINT to enable.",
-      )
-    } else if (!hasKey) {
-      _originalConsole.warn("[@deeptracer/core] No `apiKey` provided. Events will not be sent.")
-    } else if (!hasEndpoint) {
-      _originalConsole.warn("[@deeptracer/core] No `endpoint` provided. Events will not be sent.")
+    // Only warn for root loggers to avoid duplicate warnings from child loggers.
+    if (this.isRoot) {
+      const hasKey = !!config.apiKey
+      const hasEndpoint = !!config.endpoint
+      if (!hasKey && !hasEndpoint) {
+        _originalConsole.warn(
+          "[@deeptracer/core] No API key or endpoint configured. Running in local-only mode " +
+            "(logging methods work, but events are not sent). " +
+            "Set DEEPTRACER_KEY and DEEPTRACER_ENDPOINT to enable.",
+        )
+      } else if (!hasKey) {
+        _originalConsole.warn("[@deeptracer/core] No `apiKey` provided. Events will not be sent.")
+      } else if (!hasEndpoint) {
+        _originalConsole.warn("[@deeptracer/core] No `endpoint` provided. Events will not be sent.")
+      }
     }
 
     this.effectiveLevel =
       LOG_LEVEL_VALUES[config.level ?? (config.environment === "production" ? "info" : "debug")]
 
-    this.transport = new Transport(config)
-    this.batcher = new Batcher(
-      { batchSize: config.batchSize, flushIntervalMs: config.flushIntervalMs },
-      (entries) => {
-        this.transport.sendLogs(entries)
-      },
-    )
+    this.transport = sharedTransport ?? new Transport(config)
+    this.batcher =
+      sharedBatcher ??
+      new Batcher(
+        { batchSize: config.batchSize, flushIntervalMs: config.flushIntervalMs },
+        (entries) => {
+          this.transport.sendLogs(entries)
+        },
+      )
   }
 
   // ---------------------------------------------------------------------------
@@ -383,7 +392,7 @@ export class Logger {
 
   /** Create a context-scoped logger. All logs include the context name. Gets an independent copy of state. */
   withContext(name: string): Logger {
-    return new Logger(this.config, name, this.requestMeta, cloneState(this.state))
+    return new Logger(this.config, name, this.requestMeta, cloneState(this.state), this.batcher, this.transport)
   }
 
   /** Create a request-scoped logger that extracts trace context from headers. Gets an independent copy of state. */
@@ -416,6 +425,8 @@ export class Logger {
         vercel_id: vercelId,
       },
       cloneState(this.state),
+      this.batcher,
+      this.transport,
     )
   }
 
@@ -584,11 +595,11 @@ export class Logger {
         this.transport.sendTrace(hookResult.data as SpanData)
       },
       startSpan: <T>(childOp: string, fn: (span: Span) => T): T => {
-        const childLogger = new Logger(this.config, this.contextName, childMeta, this.state)
+        const childLogger = new Logger(this.config, this.contextName, childMeta, this.state, this.batcher, this.transport)
         return childLogger.startSpan(childOp, fn)
       },
       startInactiveSpan: (childOp: string): InactiveSpan => {
-        const childLogger = new Logger(this.config, this.contextName, childMeta, this.state)
+        const childLogger = new Logger(this.config, this.contextName, childMeta, this.state, this.batcher, this.transport)
         return childLogger.startInactiveSpan(childOp)
       },
       getHeaders: () => {
@@ -621,9 +632,19 @@ export class Logger {
   // Lifecycle
   // ---------------------------------------------------------------------------
 
-  /** Immediately flush all batched log entries. */
-  flush() {
+  /**
+   * Flush all batched log entries and wait for in-flight HTTP requests to complete.
+   *
+   * @returns Promise that resolves when all pending logs have been sent.
+   *
+   * @example
+   * ```ts
+   * await logger.flush() // ensure logs are sent before response is returned
+   * ```
+   */
+  async flush(): Promise<void> {
     this.batcher.flush()
+    await this.transport.drain()
   }
 
   /**
@@ -639,7 +660,11 @@ export class Logger {
    * ```
    */
   async destroy(timeoutMs?: number): Promise<void> {
-    await this.batcher.destroy()
+    if (this.isRoot) {
+      await this.batcher.destroy()
+    } else {
+      this.batcher.flush()
+    }
     await this.transport.drain(timeoutMs)
   }
 }
