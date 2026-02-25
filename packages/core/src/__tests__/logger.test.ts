@@ -408,6 +408,38 @@ describe("Logger", () => {
 
       await logger.destroy()
     })
+
+    it("module-level withContext child is flushed by a per-request forRequest sibling (Better Auth sendOTP pattern)", async () => {
+      // Regression test for the pattern:
+      //   customer-auth.ts:  const log = logger.withContext("CustomerAuth")  ← module load time
+      //   withRouteHandler:  const reqLogger = logger.forRequest(request)    ← per request
+      //   sendOTP callback:  log.error("Failed to send OTP")                ← inside 3rd-party callback
+      //   finally block:     await reqLogger.flush()
+      //
+      // All three (logger, log, reqLogger) must share the same batcher so that
+      // flushing reqLogger sends logs emitted by log.
+      const logger = createLogger(testConfig())
+
+      // Simulates: module-level const log = logger.withContext("CustomerAuth")
+      const moduleLog = logger.withContext("CustomerAuth")
+
+      // Simulates: withRouteHandler creates reqLogger = logger.forRequest(request) per request
+      const request = new Request("https://example.com/api/auth")
+      const reqLogger = logger.forRequest(request)
+
+      // Simulates: Better Auth's sendOTP callback calls log.error()
+      moduleLog.error("Failed to send OTP", { code: "WHATSAPP_FAILED" })
+
+      // Simulates: withRouteHandler's finally { await reqLogger.flush() }
+      await reqLogger.flush()
+
+      const logCall = fetchMock.calls.find((c) => c.url.includes("/ingest/logs"))
+      expect(logCall).toBeDefined()
+      expect(logCall!.body.logs[0].message).toBe("Failed to send OTP")
+      expect(logCall!.body.logs[0].context).toBe("CustomerAuth")
+
+      await logger.destroy()
+    })
   })
 
   describe("local-only mode", () => {

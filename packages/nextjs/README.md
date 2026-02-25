@@ -526,6 +526,62 @@ export const POST = async (req: Request) => {
 export const POST = withRouteHandler(logger, "POST /api/auth/[...all]", withTrustedOrigin(authPOST))
 ```
 
+**Logs from third-party callbacks silently disappear — all logger imports must come from the same root:**
+```ts
+// WHY THIS HAPPENS:
+// DeepTracer batches logs in memory. flush() sends whatever is in *that logger's* batch queue.
+// If customer-auth.ts creates its own logger via createLogger(), it has a SEPARATE queue.
+// withRouteHandler flushes *its* logger's queue — not the one customer-auth.ts is writing to.
+
+// BAD — two separate logger instances, two separate queues, flush() misses the second one
+// lib/logger.ts
+import { createLogger } from "@deeptracer/core"
+export const logger = createLogger({ apiKey: process.env.DEEPTRACER_KEY, ... })
+// ↑ This is a DIFFERENT instance from the one in instrumentation.ts
+
+// customer-auth.ts
+import { logger } from "@/lib/logger"           // logger A's queue
+const log = logger.withContext("CustomerAuth")  // shares logger A's queue
+// sendOTP: log.error("...") → goes into logger A's queue
+
+// route.ts
+import { logger } from "@/instrumentation"      // logger B (from init()) — DIFFERENT INSTANCE
+export const POST = withRouteHandler(logger, ...)
+// flush() drains logger B's queue — logger A's queue (with sendOTP logs) is never flushed
+
+// GOOD — single logger instance, one shared queue
+// instrumentation.ts
+const deeptracer = init({ service: "web" })
+export const { register, onRequestError } = deeptracer
+export const logger = deeptracer.logger          // the one true logger
+
+// customer-auth.ts
+import { logger } from "@/instrumentation"      // same instance
+const log = logger.withContext("CustomerAuth")  // shares the same queue
+
+// route.ts
+import { logger } from "@/instrumentation"      // same instance
+export const POST = withRouteHandler(logger, ...)
+// flush() drains the shared queue → sendOTP logs appear in DeepTracer ✓
+```
+
+**How to diagnose silent log drops — use `debug: true`:**
+```ts
+// instrumentation.ts
+const deeptracer = init({ debug: true })  // ← add this
+export const { register, onRequestError, logger } = deeptracer
+
+// With debug: true, every logger.info/warn/error/debug call immediately
+// prints to stdout BEFORE any batching or transport.
+// Check your Vercel function logs:
+//   If you see:   ERROR [CustomerAuth] Failed to send OTP ...
+//   → The logger IS receiving the call. Issue is in transport/config.
+//
+//   If you see NO output for a log you called:
+//   → That logger variable is a no-op or a different instance from the one debug: true is on.
+//   → Fix: ensure all logger imports trace back to the same init() call.
+```
+
 ## Monorepo
 
 This package is part of the [DeepTracer JavaScript SDK](https://github.com/getdeeptracer/deeptracer-js) monorepo:
