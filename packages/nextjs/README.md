@@ -380,6 +380,32 @@ export const logger = deeptracer.logger
 
 `init()` reads `DEEPTRACER_KEY` and `DEEPTRACER_ENDPOINT` from env vars automatically. Pass explicit config only if you need to override.
 
+**Custom `register()` — adding your own startup logic:**
+
+If you need to run additional setup alongside DeepTracer (e.g., Prisma instrumentation, env validation), write your own `register()` and call `deeptracer.register()` inside it. **You must `await` it** — it's async and sets up OpenTelemetry tracing:
+
+```ts
+// instrumentation.ts — custom register wrapping deeptracer's
+import { init } from "@deeptracer/nextjs"
+
+const deeptracer = init({ service: "web" })
+
+export const { onRequestError } = deeptracer
+export const logger = deeptracer.logger
+
+export async function register() {
+  await deeptracer.register()  // ← must be awaited (async, sets up OTel + global error capture)
+
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { registerInstrumentations } = await import("@opentelemetry/instrumentation")
+    const { PrismaInstrumentation } = await import("@prisma/instrumentation")
+    registerInstrumentations({ instrumentations: [new PrismaInstrumentation()] })
+  }
+}
+```
+
+Without `await`, OpenTelemetry tracing and the `globalThis.fetch` patch are set up in the background — they may not be ready when the first request arrives.
+
 ### 4. Client provider (recommended)
 
 ```tsx
@@ -524,6 +550,88 @@ export const POST = async (req: Request) => {
 
 // GOOD — withRouteHandler handles tracing, error capture, and flush
 export const POST = withRouteHandler(logger, "POST /api/auth/[...all]", withTrustedOrigin(authPOST))
+```
+
+**Cloning a `Request` object with `new Request(existingReq, options)` crashes on Next.js 16:**
+```ts
+// WHY THIS CRASHES:
+// Next.js 16's internal Request objects use a private #state field.
+// The copy constructor (new Request(existing, options)) tries to access #state
+// on an object whose class did not declare it → TypeError.
+// This is true regardless of which SDK or middleware you use.
+
+// BAD — crashes with: TypeError: Cannot read private member #state
+const headers = new Headers(req.headers)
+headers.set("origin", "https://example.com")
+req = new Request(req, { headers })  // ← do not use the copy constructor
+
+// GOOD — use a Proxy to override specific properties without touching #state
+const headers = new Headers(req.headers)
+headers.set("origin", "https://example.com")
+req = new Proxy(req, {
+  get(target, prop, receiver) {
+    if (prop === "headers") return headers
+    const value = Reflect.get(target, prop, receiver)
+    return typeof value === "function" ? value.bind(target) : value
+  },
+})
+// ↑ Intercepts .headers access without ever touching #state ✓
+```
+
+**Logs from third-party callbacks silently disappear — all logger imports must come from the same root:**
+```ts
+// WHY THIS HAPPENS:
+// DeepTracer batches logs in memory. flush() sends whatever is in *that logger's* batch queue.
+// If customer-auth.ts creates its own logger via createLogger(), it has a SEPARATE queue.
+// withRouteHandler flushes *its* logger's queue — not the one customer-auth.ts is writing to.
+
+// BAD — two separate logger instances, two separate queues, flush() misses the second one
+// lib/logger.ts
+import { createLogger } from "@deeptracer/core"
+export const logger = createLogger({ apiKey: process.env.DEEPTRACER_KEY, ... })
+// ↑ This is a DIFFERENT instance from the one in instrumentation.ts
+
+// customer-auth.ts
+import { logger } from "@/lib/logger"           // logger A's queue
+const log = logger.withContext("CustomerAuth")  // shares logger A's queue
+// sendOTP: log.error("...") → goes into logger A's queue
+
+// route.ts
+import { logger } from "@/instrumentation"      // logger B (from init()) — DIFFERENT INSTANCE
+export const POST = withRouteHandler(logger, ...)
+// flush() drains logger B's queue — logger A's queue (with sendOTP logs) is never flushed
+
+// GOOD — single logger instance, one shared queue
+// instrumentation.ts
+const deeptracer = init({ service: "web" })
+export const { register, onRequestError } = deeptracer
+export const logger = deeptracer.logger          // the one true logger
+
+// customer-auth.ts
+import { logger } from "@/instrumentation"      // same instance
+const log = logger.withContext("CustomerAuth")  // shares the same queue
+
+// route.ts
+import { logger } from "@/instrumentation"      // same instance
+export const POST = withRouteHandler(logger, ...)
+// flush() drains the shared queue → sendOTP logs appear in DeepTracer ✓
+```
+
+**How to diagnose silent log drops — use `debug: true`:**
+```ts
+// instrumentation.ts
+const deeptracer = init({ debug: true })  // ← add this
+export const { register, onRequestError, logger } = deeptracer
+
+// With debug: true, every logger.info/warn/error/debug call immediately
+// prints to stdout BEFORE any batching or transport.
+// Check your Vercel function logs:
+//   If you see:   ERROR [CustomerAuth] Failed to send OTP ...
+//   → The logger IS receiving the call. Issue is in transport/config.
+//
+//   If you see NO output for a log you called:
+//   → That logger variable is a no-op or a different instance from the one debug: true is on.
+//   → Fix: ensure all logger imports trace back to the same init() call.
 ```
 
 ## Monorepo
