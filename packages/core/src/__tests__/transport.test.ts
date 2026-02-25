@@ -292,6 +292,97 @@ describe("Transport", () => {
     })
   })
 
+  describe("waitUntil hook", () => {
+    it("calls waitUntil with the fetch promise on sendLogs", async () => {
+      const waitUntil = vi.fn()
+      const transport = new Transport({
+        endpoint: "https://test.deeptracer.dev",
+        apiKey: "dt_test",
+        service: "test",
+        environment: "test",
+        waitUntil,
+      })
+
+      await transport.sendLogs([{ timestamp: "t", level: "info", message: "hi" }])
+
+      expect(waitUntil).toHaveBeenCalledOnce()
+      expect(waitUntil).toHaveBeenCalledWith(expect.any(Promise))
+    })
+
+    it("calls waitUntil for each send type", async () => {
+      const waitUntil = vi.fn()
+      const transport = new Transport({
+        endpoint: "https://test.deeptracer.dev",
+        apiKey: "dt_test",
+        service: "test",
+        environment: "test",
+        waitUntil,
+      })
+
+      await transport.sendError({ error_message: "boom", stack_trace: "", severity: "high" })
+      await transport.sendTrace({
+        trace_id: "t1",
+        span_id: "s1",
+        parent_span_id: "",
+        operation: "test",
+        start_time: "t",
+        duration_ms: 100,
+        status: "ok",
+      })
+      await transport.sendLLMUsage({
+        model: "gpt-4",
+        provider: "openai",
+        operation: "chat",
+        input_tokens: 10,
+        output_tokens: 20,
+        cost_usd: 0.01,
+        latency_ms: 500,
+      })
+
+      expect(waitUntil).toHaveBeenCalledTimes(3)
+    })
+
+    it("keeps the function alive until fetch completes (simulates Vercel freeze)", async () => {
+      let resolveFetch!: () => void
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(
+          () =>
+            new Promise<Response>((resolve) => {
+              resolveFetch = () => resolve(new Response(null, { status: 200 }))
+            }),
+        ),
+      )
+
+      const capturedPromises: Promise<unknown>[] = []
+      const transport = new Transport({
+        endpoint: "https://test.deeptracer.dev",
+        apiKey: "dt_test",
+        service: "test",
+        environment: "test",
+        waitUntil: (p) => capturedPromises.push(p),
+      })
+
+      transport.sendLogs([{ timestamp: "t", level: "info", message: "bg task log" }])
+
+      expect(capturedPromises).toHaveLength(1)
+
+      let settled = false
+      capturedPromises[0].then(() => {
+        settled = true
+      })
+
+      // Fetch hasn't resolved yet — waitUntil promise is still pending
+      await vi.advanceTimersByTimeAsync(0)
+      expect(settled).toBe(false)
+
+      // Resolve the fetch — waitUntil promise settles
+      resolveFetch()
+      await capturedPromises[0]
+      expect(settled).toBe(true)
+    })
+  })
+
   describe("drain", () => {
     it("resolves immediately when no in-flight requests", async () => {
       const transport = createTransport()
