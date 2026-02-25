@@ -16,12 +16,14 @@ export type { NextjsConfig, InitResult } from "./init"
  *
  * Logging and `onRequestError` capture work identically on both runtimes.
  */
-export function init(config?: {
-  captureGlobalErrors?: boolean
-  captureConsole?: boolean
-  autoTracing?: boolean
-  tracePropagationTargets?: (string | RegExp)[]
-} & Partial<LoggerConfig>): {
+export function init(
+  config?: {
+    captureGlobalErrors?: boolean
+    captureConsole?: boolean
+    autoTracing?: boolean
+    tracePropagationTargets?: (string | RegExp)[]
+  } & Partial<LoggerConfig>,
+): {
   register: () => void
   onRequestError: (
     err: Error,
