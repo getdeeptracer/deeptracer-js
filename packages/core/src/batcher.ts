@@ -11,7 +11,10 @@ export class Batcher {
     private onFlush: (entries: LogEntry[]) => void,
   ) {
     this.batchSize = config.batchSize ?? 50
-    this.flushIntervalMs = config.flushIntervalMs ?? 5000
+    const isServerless =
+      typeof process !== "undefined" &&
+      !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME)
+    this.flushIntervalMs = config.flushIntervalMs ?? (isServerless ? 200 : 5000)
     this.startTimer()
   }
 

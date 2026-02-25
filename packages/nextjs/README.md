@@ -117,7 +117,7 @@ export const logger = deeptracer.logger
 
 ### `withServerAction(logger, name, fn)`
 
-Wrap a Next.js Server Action with automatic tracing and error capture. Creates a span and catches errors (re-throws after reporting).
+Wrap a Next.js Server Action with automatic tracing and error capture. Creates a span and catches errors (re-throws after reporting). The wrapper automatically calls `await logger.flush()` after the action completes, ensuring all logs — including those from `withContext()` child loggers created inside the action — are delivered before Vercel considers the function complete.
 
 ```ts
 // app/actions.ts
@@ -138,7 +138,27 @@ export async function createUser(formData: FormData) {
 
 ### `withRouteHandler(logger, name, handler)`
 
-Wrap a Next.js Route Handler with automatic tracing and error capture. Creates a request-scoped span and extracts trace context from headers.
+Wrap a Next.js Route Handler with automatic tracing and error capture. Creates a request-scoped span and extracts trace context from headers. The wrapper automatically calls `await logger.flush()` after the handler completes, ensuring all logs — including those from `withContext()` child loggers created inside the handler — are delivered before Vercel considers the function complete.
+
+### Logs from third-party handlers
+
+If you use a library that owns its own route handler (e.g. Auth.js, Better Auth, Stripe webhooks), you cannot wrap it with `withRouteHandler`. In that case, use Vercel's `waitUntil` to guarantee delivery after the response is sent:
+
+```ts
+// app/api/auth/[...all]/route.ts
+import { waitUntil } from "@vercel/functions"
+import { logger } from "@/instrumentation"
+import { handlers } from "@/lib/auth"
+
+export const GET = handlers.GET
+export const POST = async (req: Request) => {
+  const response = await handlers.POST(req)
+  waitUntil(logger.flush()) // delivers any logs emitted inside the auth handler
+  return response
+}
+```
+
+`waitUntil` is non-blocking — the response is returned to the client immediately, and Vercel extends the function lifetime to complete the flush.
 
 ```ts
 // app/api/users/route.ts

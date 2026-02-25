@@ -67,22 +67,26 @@ export function withRouteHandler<T extends (...args: any[]) => any>(
     const request = args[0] as Request
     const reqLogger = logger.forRequest(request)
 
-    return reqLogger.startSpan(`route:${name}`, async () => {
-      try {
-        return await handler(...args)
-      } catch (error) {
-        reqLogger.captureError(error, {
-          severity: "high",
-          context: {
-            source: "route-handler",
-            route: name,
-            method: request.method,
-            url: request.url,
-          },
-        })
-        throw error
-      }
-    })
+    try {
+      return await reqLogger.startSpan(`route:${name}`, async () => {
+        try {
+          return await handler(...args)
+        } catch (error) {
+          reqLogger.captureError(error, {
+            severity: "high",
+            context: {
+              source: "route-handler",
+              route: name,
+              method: request.method,
+              url: request.url,
+            },
+          })
+          throw error
+        }
+      })
+    } finally {
+      await reqLogger.flush()
+    }
   }
 
   return wrapped as unknown as T

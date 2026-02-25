@@ -90,7 +90,7 @@ const logger = createLogger({
 
   // Optional
   batchSize: 50,                 // Logs to buffer before sending (default: 50)
-  flushIntervalMs: 5000,         // Max ms between flushes (default: 5000)
+  flushIntervalMs: 5000,         // Max ms between flushes (default: 5000 — 200 in serverless environments, auto-detected via VERCEL or AWS_LAMBDA_FUNCTION_NAME)
   debug: false,                  // Mirror logs to console (default: false)
 })
 ```
@@ -104,7 +104,7 @@ const logger = createLogger({
 | `service` | `string` | `"server"` | Service name (e.g., `"api"`, `"worker"`, `"web"`) |
 | `environment` | `string` | `NODE_ENV` / `"production"` | Deployment environment |
 | `batchSize` | `number` | `50` | Number of log entries to buffer before flushing |
-| `flushIntervalMs` | `number` | `5000` | Milliseconds between automatic flushes |
+| `flushIntervalMs` | `number` | `5000 (200 in serverless environments — auto-detected via VERCEL or AWS_LAMBDA_FUNCTION_NAME)` | Milliseconds between automatic flushes |
 | `debug` | `boolean` | `false` | When `true`, all log calls also print to the console |
 
 ## API Reference
@@ -364,7 +364,7 @@ logger.llmUsage({
 
 #### `forRequest(request)`
 
-Create a request-scoped logger that extracts distributed trace context from incoming HTTP headers. The returned logger attaches `trace_id`, `span_id`, `request_id`, and `vercel_id` to all subsequent logs, errors, and spans.
+Create a request-scoped logger that extracts distributed trace context from incoming HTTP headers. The returned logger attaches `trace_id`, `span_id`, `request_id`, and `vercel_id` to all subsequent logs, errors, and spans. Child loggers share the same transport as the root logger — logs from children are flushed together with the parent.
 
 ```ts
 const reqLogger = logger.forRequest(request: Request): Logger
@@ -396,7 +396,7 @@ app.get("/api/users", async (c) => {
 
 #### `withContext(name)`
 
-Create a new logger that includes a context name in every log entry. Useful for distinguishing logs from different modules or subsystems.
+Create a new logger that includes a context name in every log entry. Useful for distinguishing logs from different modules or subsystems. Child loggers share the same transport as the root logger — logs from children are flushed together with the parent.
 
 ```ts
 const dbLogger = logger.withContext("database")
@@ -411,12 +411,12 @@ authLogger.info("Token refreshed")            // context: "auth"
 
 ### Lifecycle
 
-#### `flush()`
+#### `flush(): Promise<void>`
 
 Immediately send all buffered log entries. Call this before your process exits or when you want to ensure logs are delivered.
 
 ```ts
-logger.flush()
+await logger.flush()
 ```
 
 #### `destroy()`
@@ -430,6 +430,8 @@ process.on("SIGTERM", () => {
 })
 ```
 
+> **Note on child loggers:** Calling `destroy()` on a child logger (returned by `withContext()` or `forRequest()`) flushes the shared buffer and drains in-flight requests, but does **not** stop the root logger's batch timer. Only calling `destroy()` on the root logger stops the timer.
+
 ## Type Reference
 
 ### LoggerConfig
@@ -441,7 +443,7 @@ interface LoggerConfig {
   endpoint: string
   apiKey: string
   batchSize?: number          // default: 50
-  flushIntervalMs?: number    // default: 5000
+  flushIntervalMs?: number    // default: 5000 (200 in serverless environments — auto-detected via VERCEL or AWS_LAMBDA_FUNCTION_NAME)
   debug?: boolean             // default: false
 }
 ```
@@ -570,6 +572,25 @@ Log entries are buffered and sent in batches to reduce network overhead:
 5. Calling `destroy()` clears the interval timer and performs a final flush.
 
 Error reports (`captureError`) and span data (`startSpan`, `startInactiveSpan`) are **not batched** -- they are sent immediately.
+
+### Serverless environments (Vercel, AWS Lambda)
+
+In serverless functions, the execution context may freeze immediately after the HTTP response is sent, before the automatic flush timer fires. DeepTracer handles this in two ways:
+
+- **Auto-detected interval**: When `VERCEL` or `AWS_LAMBDA_FUNCTION_NAME` is set, the default `flushIntervalMs` drops to 200ms.
+- **Explicit flush**: Call `await logger.flush()` before returning a response to guarantee delivery.
+
+For third-party route handlers you can't wrap (e.g. Auth.js, Stripe webhooks), use Vercel's `waitUntil` to extend the function lifetime:
+
+```ts
+import { waitUntil } from "@vercel/functions"
+
+export const POST = async (req: Request) => {
+  const response = await thirdPartyHandler(req)
+  waitUntil(logger.flush()) // extends function lifetime, non-blocking
+  return response
+}
+```
 
 ## Transport
 
