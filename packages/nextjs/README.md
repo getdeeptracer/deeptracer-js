@@ -138,27 +138,9 @@ export async function createUser(formData: FormData) {
 
 ### `withRouteHandler(logger, name, handler)`
 
-Wrap a Next.js Route Handler with automatic tracing and error capture. Creates a request-scoped span and extracts trace context from headers. The wrapper automatically calls `await logger.flush()` after the handler completes, ensuring all logs — including those from `withContext()` child loggers created inside the handler — are delivered before Vercel considers the function complete.
+Wrap a Next.js Route Handler with automatic tracing and error capture. Creates a request-scoped span, extracts trace context from incoming headers, and captures any thrown errors (re-throws after reporting so Next.js error handling still works). Automatically calls `await logger.flush()` in a `finally` block — all logs from the request, including those from `withContext()` child loggers, are guaranteed to be delivered before Vercel considers the function complete.
 
-### Logs from third-party handlers
-
-If you use a library that owns its own route handler (e.g. Auth.js, Better Auth, Stripe webhooks), you cannot wrap it with `withRouteHandler`. In that case, use Vercel's `waitUntil` to guarantee delivery after the response is sent:
-
-```ts
-// app/api/auth/[...all]/route.ts
-import { waitUntil } from "@vercel/functions"
-import { logger } from "@/instrumentation"
-import { handlers } from "@/lib/auth"
-
-export const GET = handlers.GET
-export const POST = async (req: Request) => {
-  const response = await handlers.POST(req)
-  waitUntil(logger.flush()) // delivers any logs emitted inside the auth handler
-  return response
-}
-```
-
-`waitUntil` is non-blocking — the response is returned to the client immediately, and Vercel extends the function lifetime to complete the flush.
+**Works with any handler function** — including handlers exported by third-party libraries (Auth.js, Better Auth, Stripe webhooks, etc.). If a library exports a handler, you can wrap it.
 
 ```ts
 // app/api/users/route.ts
@@ -175,6 +157,51 @@ export const POST = withRouteHandler(logger, "POST /api/users", async (request) 
   const user = await db.user.create({ data: body })
   return Response.json(user, { status: 201 })
 })
+```
+
+**Wrapping third-party handlers** (Auth.js, Better Auth, Stripe, etc.):
+
+```ts
+// app/api/auth/[...all]/route.ts
+import { withRouteHandler } from "@deeptracer/nextjs"
+import { logger } from "@/instrumentation"
+import { GET as authGET, POST as authPOST } from "@/lib/auth" // Better Auth / Auth.js handlers
+
+export const GET = withRouteHandler(logger, "GET /api/auth/[...all]", authGET)
+export const POST = withRouteHandler(logger, "POST /api/auth/[...all]", withTrustedOrigin(authPOST))
+```
+
+This is the recommended approach — you get tracing, error capture, and guaranteed flush with one wrapper.
+
+**Dynamic routes (Next.js 15+ async params):**
+
+```ts
+// app/api/users/[id]/route.ts
+export const GET = withRouteHandler(
+  logger,
+  "GET /api/users/[id]",
+  async (request, { params }: { params: Promise<{ id: string }> }) => {
+    const { id } = await params
+    const user = await db.user.findById(id)
+    return Response.json(user)
+  },
+)
+```
+
+**When you genuinely can't wrap** — if a library provides a fully-assembled Next.js handler object (e.g. `export default handler` from a framework) rather than individual `GET`/`POST` functions, use Vercel's `waitUntil` instead:
+
+```ts
+// app/api/auth/[...all]/route.ts — only if the library doesn't export individual GET/POST functions
+import { waitUntil } from "@vercel/functions"
+import { logger } from "@/instrumentation"
+import { handlers } from "@/lib/auth"
+
+export const GET = handlers.GET
+export const POST = async (req: Request) => {
+  const response = await handlers.POST(req)
+  waitUntil(logger.flush()) // non-blocking — response is returned immediately
+  return response
+}
 ```
 
 ---
@@ -479,6 +506,24 @@ init({ secretKey: "dt_secret_xxx", service: "web" })
 
 // GOOD (v0.5+ API — single apiKey)
 init({ apiKey: "dt_xxx", service: "web" })
+```
+
+**Thinking `withRouteHandler` only works for handlers you write:**
+```ts
+// WRONG assumption — withRouteHandler wraps any (Request) => Response function
+// including ones exported by third-party libraries
+
+// BAD — unnecessary boilerplate
+export const POST = async (req: Request) => {
+  try {
+    return await authPOST(req)
+  } finally {
+    await logger.flush()
+  }
+}
+
+// GOOD — withRouteHandler handles tracing, error capture, and flush
+export const POST = withRouteHandler(logger, "POST /api/auth/[...all]", withTrustedOrigin(authPOST))
 ```
 
 ## Monorepo
