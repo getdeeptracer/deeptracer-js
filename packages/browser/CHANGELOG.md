@@ -1,5 +1,11 @@
 # @deeptracer/browser
 
+## 0.6.4
+
+### Patch Changes
+
+- @deeptracer/core@0.6.4
+
 ## 0.6.3
 
 ### Patch Changes
