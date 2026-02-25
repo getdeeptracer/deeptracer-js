@@ -74,7 +74,7 @@ const result = await logger.startSpan("fetch-user", async (span) => {
 })
 
 // Flush before shutdown
-logger.destroy()
+await logger.destroy()
 ```
 
 ## Configuration
@@ -424,8 +424,8 @@ await logger.flush()
 Stop the internal batch timer and flush any remaining log entries. Call this during graceful shutdown.
 
 ```ts
-process.on("SIGTERM", () => {
-  logger.destroy()
+process.on("SIGTERM", async () => {
+  await logger.destroy()
   process.exit(0)
 })
 ```
@@ -580,7 +580,7 @@ In serverless functions, the execution context may freeze immediately after the 
 - **Auto-detected interval**: When `VERCEL` or `AWS_LAMBDA_FUNCTION_NAME` is set, the default `flushIntervalMs` drops to 200ms.
 - **Explicit flush**: Call `await logger.flush()` before returning a response to guarantee delivery.
 
-For third-party route handlers you can't wrap (e.g. Auth.js, Stripe webhooks), use Vercel's `waitUntil` to extend the function lifetime:
+For **`@deeptracer/nextjs`** users, `withRouteHandler` works with any handler function including third-party ones (Auth.js, Better Auth, Stripe webhooks) — just wrap the exported handler. Only use `waitUntil` if the library doesn't export individual `GET`/`POST` functions:
 
 ```ts
 import { waitUntil } from "@vercel/functions"
@@ -608,7 +608,7 @@ All requests include:
 - `Content-Type: application/json` header
 - `service` and `environment` fields in the JSON body
 
-If a request fails, a warning is logged to the console. The SDK does not retry failed requests -- it is designed to be non-blocking and never crash your application.
+If a request fails with a network error or a 5xx response, the SDK retries up to **3 times** with exponential backoff (1s → 2s → 4s, +20% jitter). 4xx errors (bad auth, invalid payload) are not retried. After all retries are exhausted, a single warning is logged to the console — subsequent failures for the same endpoint are suppressed to avoid console spam. The SDK never throws on transport errors.
 
 ## Monorepo
 
