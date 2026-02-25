@@ -1,5 +1,13 @@
 # @deeptracer/node
 
+## 0.7.0
+
+### Patch Changes
+
+- Updated dependencies [374afbe]
+- Updated dependencies [15d3da3]
+  - @deeptracer/core@0.7.0
+
 ## 0.6.4
 
 ### Patch Changes

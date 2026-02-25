@@ -1,5 +1,64 @@
 # @deeptracer/nextjs
 
+## 0.7.0
+
+### Minor Changes
+
+- 15d3da3: feat: automatic Vercel waitUntil support for post-response background task logs
+
+  Logs written after the HTTP response is returned (e.g., from Better Auth's
+  `runInBackgroundOrAwait`, Stripe webhook processing, or any third-party library
+  that defers work past the response) were silently dropped on Vercel because the
+  function execution context is frozen after the response.
+
+  **`@deeptracer/nextjs`**: `register()` now automatically detects Vercel and wires
+  up `waitUntil` from `@vercel/functions`. No user action required — just upgrade.
+
+  **`@deeptracer/core`**: New optional `waitUntil` field on `LoggerConfig` for
+  non-Next.js deployments. On Cloudflare Workers, pass `ctx.waitUntil.bind(ctx)` when
+  creating the logger. On persistent servers (Railway, Fly, Docker) this field is not
+  needed — the timer-based flush handles it.
+
+### Patch Changes
+
+- 374afbe: Fix `register` return type in `InitResult` (`() => void` → `() => Promise<void>`) — previously TypeScript did not flag missing `await` when wrapping `deeptracer.register()` in a custom register function, causing OTel setup and the fetch patch to run in the background instead of completing before the first request.
+
+  Add README documentation:
+  - Custom `register()` wrapper pattern showing `await deeptracer.register()`
+  - `new Request(existingReq, options)` copy-constructor crash on Next.js 16 with safe `Proxy` alternative
+  - `debug: true` diagnostic guide for silent log drops
+  - Multi-logger-instance anti-pattern and singleton fix
+
+  Add regression test: module-level `withContext` child flushed by per-request `forRequest` sibling flush (Better Auth `sendOTP` pattern).
+
+- 374afbe: Fix TypeError crash when route handlers clone a Request object
+
+  `UndiciInstrumentation` from `@opentelemetry/instrumentation-undici` patched the global `Request` constructor, breaking the standard `new Request(existingRequest, options)` copy-constructor pattern used by Better Auth, Remix adapters, and any middleware that clones requests with modified headers. The crash:
+
+  ```
+  TypeError: Cannot read private member #state from an object whose class did not declare it
+      at new Request (node:internal/deps/undici/undici:10984:27)
+  ```
+
+  The fix replaces `UndiciInstrumentation` with a `globalThis.fetch` wrapper — the same approach used by `@vercel/otel` and Sentry v8 after their own undici crash.
+
+  The wrapper:
+  - Creates a `SpanKind.CLIENT` child span for each outgoing fetch call
+  - Injects `traceparent` from the child span's context (correct: downstream sees the immediate caller, not the route handler)
+  - Records `http.method`, `http.url`, `http.host`, `http.status_code` on the span
+  - Respects `tracePropagationTargets` and the ingestion endpoint exclusion
+  - Never calls `new Request(...)` — reads `input.headers` directly (safe property access)
+
+  No capability regression: outgoing fetch tracing (span creation + trace propagation) is fully preserved.
+
+  `@opentelemetry/instrumentation-undici` is no longer a dependency.
+
+- Updated dependencies [374afbe]
+- Updated dependencies [15d3da3]
+  - @deeptracer/core@0.7.0
+  - @deeptracer/node@0.7.0
+  - @deeptracer/react@0.7.0
+
 ## 0.6.4
 
 ### Patch Changes
