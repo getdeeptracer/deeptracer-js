@@ -33,7 +33,7 @@ export class Transport {
   private warnedLabels = new Set<string>()
 
   constructor(
-    private config: Pick<LoggerConfig, "endpoint" | "apiKey" | "service" | "environment">,
+    private config: Pick<LoggerConfig, "endpoint" | "apiKey" | "service" | "environment" | "waitUntil">,
   ) {
     const hasKey = !!config.apiKey
     const hasEndpoint = !!config.endpoint
@@ -134,6 +134,10 @@ export class Transport {
   private track(promise: Promise<void>): void {
     this.inFlightRequests.add(promise)
     promise.finally(() => this.inFlightRequests.delete(promise))
+    // Tell the serverless runtime to keep the function alive until this
+    // fetch completes — handles logs written after the response is returned
+    // (e.g., Better Auth background task callbacks).
+    this.config.waitUntil?.(promise)
   }
 
   async sendLogs(logs: LogEntry[]): Promise<void> {

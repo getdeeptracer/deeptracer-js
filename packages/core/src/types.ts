@@ -63,6 +63,28 @@ export interface LoggerConfig {
    * ```
    */
   beforeSend?: (event: BeforeSendEvent) => BeforeSendEvent | null
+  /**
+   * Called with each outgoing HTTP request promise when the transport sends data.
+   * Use this to keep a serverless function alive until all in-flight requests
+   * complete — even for logs written after the HTTP response has been returned
+   * (e.g., from Better Auth background task callbacks or other post-response work).
+   *
+   * On Vercel this is wired up automatically by `@deeptracer/nextjs`.
+   * On Cloudflare Workers, pass `ctx.waitUntil.bind(ctx)` when creating the logger.
+   * On persistent servers (Railway, Fly, Docker) you don't need this — the process
+   * stays alive and the timer-based flush handles it.
+   *
+   * @example Cloudflare Workers
+   * ```ts
+   * export default {
+   *   async fetch(request, env, ctx) {
+   *     const logger = createLogger({ waitUntil: ctx.waitUntil.bind(ctx), ... })
+   *     // logs are now kept alive past the response
+   *   }
+   * }
+   * ```
+   */
+  waitUntil?: (promise: Promise<unknown>) => void
 }
 
 /** Log severity level */

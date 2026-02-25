@@ -72,9 +72,18 @@
     "server-only": "^0.0.1"
   },
   "peerDependencies": {
+    "@vercel/functions": ">=1",
     "next": ">=15",
     "react": ">=18",
     "react-dom": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "@vercel/functions": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@vercel/functions": "^1.0.0"
   },
   "scripts": {
     "prebuild": "rm -rf dist",

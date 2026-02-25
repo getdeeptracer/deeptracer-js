@@ -198,6 +198,20 @@ export function init(config?: NextjsConfig): InitResult {
   const shouldAutoTrace = config?.autoTracing !== false
 
   async function register(): Promise<void> {
+    // Auto-wire Vercel waitUntil so logs written after the HTTP response is returned
+    // (e.g., from Better Auth's runInBackgroundOrAwait, Stripe webhook processing,
+    // or any third-party library that defers work past the response) are not dropped
+    // when Vercel freezes the function execution context.
+    if (typeof process !== "undefined" && process.env.VERCEL) {
+      try {
+        const { waitUntil } = await import("@vercel/functions")
+        resolved.waitUntil = waitUntil
+      } catch {
+        // @vercel/functions not installed — falls back to timer-based flushing.
+        // This should not happen on Vercel where the package is always available.
+      }
+    }
+
     const runtime = typeof process !== "undefined" ? process.env?.NEXT_RUNTIME : undefined
 
     if (runtime === "nodejs") {
