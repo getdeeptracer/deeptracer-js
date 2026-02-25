@@ -83,7 +83,7 @@
     }
   },
   "devDependencies": {
-    "@vercel/functions": "^1.0.0"
+    "@vercel/functions": "^3.4.3"
   },
   "scripts": {
     "prebuild": "rm -rf dist",
