@@ -525,6 +525,21 @@ import { createLogger } from "@deeptracer/nextjs/universal"
 export { DeepTracerErrorPage as default } from "@deeptracer/nextjs/client"
 ```
 
+**Adding `@deeptracer/nextjs` to `serverExternalPackages`:**
+```ts
+// BAD — causes "This module cannot be imported from a Client Component" build error
+const nextConfig = {
+  serverExternalPackages: ["@deeptracer/nextjs", "@deeptracer/node", "@deeptracer/core"],
+}
+
+// GOOD — don't add DeepTracer packages here at all
+const nextConfig = {
+  serverExternalPackages: ["pg", "@clickhouse/client"], // only native/non-bundleable packages
+}
+```
+
+`serverExternalPackages` is for packages with **native bindings or Node.js built-ins that webpack can't bundle** (like `pg`, `sharp`, `@clickhouse/client`). The DeepTracer SDK is pure TypeScript — it bundles correctly without any special treatment. Adding it as an external package forces it to load via native `require()` in Next.js's page data collection workers, where the `server-only` guard correctly fires because there's no webpack context. The error message (`This module cannot be imported from a Client Component`) is misleading — the real cause is the external loading context.
+
 **Using old `secretKey`/`publicKey` fields:**
 ```ts
 // BAD (pre-v0.5 API — no longer works)
