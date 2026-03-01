@@ -39,6 +39,17 @@ export interface LoggerConfig {
    * Override via `DEEPTRACER_LOG_LEVEL` (server) or `NEXT_PUBLIC_DEEPTRACER_LOG_LEVEL` (client).
    */
   level?: LogLevel
+  /**
+   * Release identifier sent with all events (logs, errors, traces, LLM usage).
+   *
+   * Used for source map resolution on errors and deployment correlation
+   * across all event types.
+   *
+   * Auto-detected (in order) from environment variables when not set explicitly:
+   * `DEEPTRACER_RELEASE`, `VERCEL_GIT_COMMIT_SHA`, `RAILWAY_GIT_COMMIT_SHA`,
+   * `RENDER_GIT_COMMIT`, `FLY_IMAGE_REF`, `GIT_COMMIT_SHA`, `COMMIT_SHA`.
+   */
+  release?: string
   /** Enable console output for all log calls (useful for local development) */
   debug?: boolean
   /** Maximum breadcrumbs to retain for error reports. Default: 20 */
@@ -104,6 +115,8 @@ export interface LogEntry {
   request_id?: string
   vercel_id?: string
   context?: string
+  /** Release identifier for deployment correlation */
+  release?: string
 }
 
 /**
@@ -132,6 +145,8 @@ export interface ErrorReport {
   trace_id?: string
   user_id?: string
   breadcrumbs?: Breadcrumb[]
+  /** Release identifier for source map lookup */
+  release?: string
 }
 
 /**
@@ -160,6 +175,8 @@ export interface SpanData {
   duration_ms: number
   status: "ok" | "error"
   metadata?: Record<string, unknown>
+  /** Release identifier for deployment correlation */
+  release?: string
 }
 
 /**

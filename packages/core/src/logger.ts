@@ -65,6 +65,35 @@ export function parseTraceparent(
 }
 
 /**
+ * Resolve the release identifier from explicit config or platform environment variables.
+ * Returns `undefined` when no release can be detected (local development without env vars).
+ *
+ * Priority order:
+ * 1. Explicit `config.release` (user-provided)
+ * 2. `DEEPTRACER_RELEASE` (generic override)
+ * 3. Platform-specific env vars (Vercel, Railway, Render, Fly)
+ * 4. Generic git commit env vars
+ *
+ * @internal Exported for testing. Not part of the public API.
+ */
+export function resolveRelease(config: LoggerConfig): string | undefined {
+  if (config.release) return config.release
+  if (typeof process !== "undefined" && process.env) {
+    return (
+      process.env.DEEPTRACER_RELEASE ||
+      process.env.VERCEL_GIT_COMMIT_SHA ||
+      process.env.RAILWAY_GIT_COMMIT_SHA ||
+      process.env.RENDER_GIT_COMMIT ||
+      process.env.FLY_IMAGE_REF ||
+      process.env.GIT_COMMIT_SHA ||
+      process.env.COMMIT_SHA ||
+      undefined
+    )
+  }
+  return undefined
+}
+
+/**
  * Original console methods, preserved before any interception.
  * Used internally by the Logger's debug output to avoid infinite loops
  * when captureConsole() is active.
@@ -103,6 +132,7 @@ export class Logger {
   private transport: Transport
   private readonly isRoot: boolean
   private effectiveLevel: number
+  private release: string | undefined
   protected contextName?: string
   protected config: LoggerConfig
   protected state: LoggerState
@@ -145,6 +175,8 @@ export class Logger {
         _originalConsole.warn("[@deeptracer/core] No `endpoint` provided. Events will not be sent.")
       }
     }
+
+    this.release = resolveRelease(config)
 
     this.effectiveLevel =
       LOG_LEVEL_VALUES[config.level ?? (config.environment === "production" ? "info" : "debug")]
@@ -357,6 +389,7 @@ export class Logger {
       span_id: this.requestMeta?.span_id,
       request_id: this.requestMeta?.request_id,
       vercel_id: this.requestMeta?.vercel_id,
+      release: this.release,
     }
 
     // Apply beforeSend hook
@@ -478,6 +511,7 @@ export class Logger {
       trace_id: this.requestMeta?.trace_id,
       user_id: context?.userId || this.state.user?.id,
       breadcrumbs: context?.breadcrumbs || [...this.state.breadcrumbs],
+      release: this.release,
     }
 
     // Apply beforeSend hook
@@ -503,6 +537,7 @@ export class Logger {
       cost_usd: report.costUsd || 0,
       latency_ms: report.latencyMs,
       metadata,
+      release: this.release,
     }
 
     // Apply beforeSend hook
@@ -594,6 +629,7 @@ export class Logger {
           duration_ms: durationMs,
           status: options?.status || "ok",
           metadata: this.mergeStateMetadata(options?.metadata),
+          release: this.release,
         }
 
         // Apply beforeSend hook

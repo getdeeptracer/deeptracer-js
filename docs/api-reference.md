@@ -80,6 +80,7 @@ curl -X POST https://ingest.deeptracer.dev/ingest/logs \
 | `logs[].span_id` | string | no | — | Span ID for correlation |
 | `logs[].request_id` | string | no | — | Request ID |
 | `logs[].context` | string | no | — | Logger context name |
+| `logs[].release` | string | no | — | Release identifier for deployment correlation |
 
 ---
 
@@ -127,6 +128,56 @@ The `fingerprint` is a SHA-256 hash used to group identical errors together.
 | `breadcrumbs[].type` | string | yes | — | Breadcrumb type (e.g., `"http"`, `"ui"`, `"navigation"`) |
 | `breadcrumbs[].message` | string | yes | — | What happened |
 | `breadcrumbs[].timestamp` | string | yes | — | ISO 8601 timestamp |
+| `release` | string | no | — | Release identifier for source map resolution and deployment correlation (max 128 chars) |
+
+---
+
+## POST /ingest/sourcemaps
+
+Upload source map files for a release. Source maps are used to resolve minified stack traces back to original source code.
+
+**Request** (multipart form):
+
+```bash
+curl -X POST https://ingest.deeptracer.dev/ingest/sourcemaps \
+  -H "Authorization: Bearer dt_your_api_key" \
+  -F "release=v1.2.3" \
+  -F "files=@.next/static/chunks/app.js.map" \
+  -F "files=@.next/static/chunks/page.js.map"
+```
+
+**Response** (200):
+
+```json
+{ "ok": true, "release": "v1.2.3", "count": 2 }
+```
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `release` | string | **yes** | Release identifier (must match the `release` sent with errors) |
+| `files` | File[] | **yes** | One or more `.map` files (total size < 50 MB) |
+
+**Notes:**
+- Source maps are matched to error stack traces using `release` + filename
+- The Next.js SDK uploads source maps automatically during `next build` when configured
+- You can also upload manually using the `@deeptracer/cli` package
+
+## DELETE /ingest/sourcemaps/:release
+
+Delete all source maps for a release.
+
+```bash
+curl -X DELETE https://ingest.deeptracer.dev/ingest/sourcemaps/v1.2.3 \
+  -H "Authorization: Bearer dt_your_api_key"
+```
+
+**Response** (200):
+
+```json
+{ "ok": true }
+```
 
 ---
 
@@ -174,6 +225,7 @@ curl -X POST https://ingest.deeptracer.dev/ingest/traces \
 | `duration_ms` | integer | **yes** | — | Duration in milliseconds (>= 0) |
 | `status` | string | no | `"ok"` | `"ok"` or `"error"` |
 | `metadata` | object | no | — | Arbitrary span attributes |
+| `release` | string | no | — | Release identifier for deployment correlation |
 
 ---
 
@@ -221,6 +273,7 @@ curl -X POST https://ingest.deeptracer.dev/ingest/llm \
 | `cost_usd` | number | no | `0` | Estimated cost in USD |
 | `latency_ms` | integer | **yes** | — | Request latency in milliseconds (>= 0) |
 | `metadata` | object | no | — | Arbitrary metadata |
+| `release` | string | no | — | Release identifier for deployment correlation |
 
 ---
 

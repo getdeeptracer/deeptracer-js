@@ -75,6 +75,9 @@ export class Transport {
             "x-deeptracer-sdk": `${SDK_NAME}/${SDK_VERSION}`,
           },
           body: JSON.stringify(body),
+          // Keep the request alive if the browser tab closes or navigates away
+          // mid-flight. Node.js (undici) silently ignores this flag.
+          keepalive: typeof window !== "undefined",
         })
 
         if (res.ok) {
