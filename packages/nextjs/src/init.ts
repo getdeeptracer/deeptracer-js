@@ -173,6 +173,7 @@ export function init(config?: NextjsConfig): InitResult {
       process.env.NODE_ENV ??
       "production",
     level: config?.level ?? (process.env.DEEPTRACER_LOG_LEVEL as LogLevel | undefined),
+    release: config?.release,
     batchSize: config?.batchSize,
     flushIntervalMs: config?.flushIntervalMs,
     debug: config?.debug,
