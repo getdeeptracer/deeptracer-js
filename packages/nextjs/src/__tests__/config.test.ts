@@ -45,6 +45,13 @@ function stubSourceMapEnv(overrides?: {
 // ---------------------------------------------------------------------------
 
 describe("isUploadEnabled", () => {
+  beforeEach(() => {
+    // Clear CI env vars that GitHub Actions sets — shouldAutoEnable() reads these
+    vi.stubEnv("CI", "")
+    vi.stubEnv("VERCEL", "")
+    vi.stubEnv("DEEPTRACER_UPLOAD_SOURCEMAPS", "")
+  })
+
   afterEach(() => {
     vi.unstubAllEnvs()
   })
@@ -484,10 +491,7 @@ describe("withDeepTracer — compiler hook", () => {
   })
 
   it("preserves existing compiler options alongside our hook", () => {
-    const result = withDeepTracer(
-      { compiler: { removeConsole: true } },
-      dtConfig,
-    )
+    const result = withDeepTracer({ compiler: { removeConsole: true } }, dtConfig)
     expect(result.compiler?.removeConsole).toBe(true)
     expect(typeof result.compiler?.runAfterProductionCompile).toBe("function")
   })
@@ -500,10 +504,7 @@ describe("withDeepTracer — compiler hook", () => {
 
     fsMocks.readdir.mockResolvedValue([])
 
-    const result = withDeepTracer(
-      { compiler: { runAfterProductionCompile: userHook } },
-      dtConfig,
-    )
+    const result = withDeepTracer({ compiler: { runAfterProductionCompile: userHook } }, dtConfig)
 
     await result.compiler?.runAfterProductionCompile?.({
       distDir: "/fake/.next",
@@ -548,9 +549,7 @@ describe("withDeepTracer — runAfterProductionCompile callback", () => {
   })
 
   it("calls fetch with correct URL and Authorization header when .map files exist", async () => {
-    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("ok", { status: 200 }),
-    )
+    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok", { status: 200 }))
     fsMocks.readdir.mockResolvedValue(["static/chunks/app.js.map"])
     fsMocks.readFile.mockResolvedValue(Buffer.from('{"version":3}'))
     fsMocks.unlink.mockResolvedValue(undefined)
@@ -570,9 +569,7 @@ describe("withDeepTracer — runAfterProductionCompile callback", () => {
     const result = withDeepTracer({}, dtConfig)
     await result.compiler?.runAfterProductionCompile?.(metadata)
 
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining("No source map files found"),
-    )
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("No source map files found"))
   })
 
   it("does not throw when distDir does not exist (ENOENT)", async () => {
@@ -580,32 +577,24 @@ describe("withDeepTracer — runAfterProductionCompile callback", () => {
     fsMocks.readdir.mockRejectedValue(enoent)
 
     const result = withDeepTracer({}, dtConfig)
-    await expect(
-      result.compiler?.runAfterProductionCompile?.(metadata),
-    ).resolves.toBeUndefined()
+    await expect(result.compiler?.runAfterProductionCompile?.(metadata)).resolves.toBeUndefined()
   })
 
   it("warns on HTTP error but does not throw", async () => {
-    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("server error", { status: 500 }),
-    )
+    fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("server error", { status: 500 }))
     fsMocks.readdir.mockResolvedValue(["app.js.map"])
     fsMocks.readFile.mockResolvedValue(Buffer.from("{}"))
 
     const result = withDeepTracer({}, dtConfig)
-    await expect(
-      result.compiler?.runAfterProductionCompile?.(metadata),
-    ).resolves.toBeUndefined()
+    await expect(result.compiler?.runAfterProductionCompile?.(metadata)).resolves.toBeUndefined()
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Source map upload failed"),
-    )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Source map upload failed"))
   })
 
   it("deletes .map files from disk after successful upload when enabled", async () => {
-    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("ok", { status: 200 }),
-    )
+    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok", { status: 200 }))
     fsMocks.readdir.mockResolvedValue(["a.js.map", "b.js.map"])
     fsMocks.readFile.mockResolvedValue(Buffer.from("{}"))
     fsMocks.unlink.mockResolvedValue(undefined)
@@ -614,15 +603,13 @@ describe("withDeepTracer — runAfterProductionCompile callback", () => {
     await result.compiler?.runAfterProductionCompile?.(metadata)
 
     expect(fsMocks.unlink).toHaveBeenCalledTimes(2)
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Deleted 2 source map(s)"),
-    )
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Deleted 2 source map(s)"))
   })
 
   it("does NOT delete files when upload fails", async () => {
-    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("error", { status: 500 }),
-    )
+    fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("error", { status: 500 }))
     fsMocks.readdir.mockResolvedValue(["a.js.map"])
     fsMocks.readFile.mockResolvedValue(Buffer.from("{}"))
     fsMocks.unlink.mockResolvedValue(undefined)
@@ -634,9 +621,7 @@ describe("withDeepTracer — runAfterProductionCompile callback", () => {
   })
 
   it("does NOT delete files when deleteSourceMapsAfterUpload is false (default)", async () => {
-    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("ok", { status: 200 }),
-    )
+    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok", { status: 200 }))
     fsMocks.readdir.mockResolvedValue(["a.js.map"])
     fsMocks.readFile.mockResolvedValue(Buffer.from("{}"))
     fsMocks.unlink.mockResolvedValue(undefined)
