@@ -217,9 +217,7 @@ async function uploadSourceMaps(
       `[@deeptracer/nextjs] Uploaded ${uploadedCount} source map(s) for release "${release}".`,
     )
     if (deleteAfterUpload) {
-      console.log(
-        `[@deeptracer/nextjs] Deleted ${uploadedCount} source map(s) from build output.`,
-      )
+      console.log(`[@deeptracer/nextjs] Deleted ${uploadedCount} source map(s) from build output.`)
     }
   }
 }
