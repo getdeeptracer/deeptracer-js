@@ -487,6 +487,11 @@ export class Logger {
       breadcrumbs?: Breadcrumb[]
     },
   ) {
+    // Capture call-site stack immediately — before any async hops unwind it.
+    // Used as fallback when the error itself has no .stack (e.g. Bun network
+    // errors, string throws, errors from some edge runtimes).
+    const syntheticStack = new Error().stack ?? ""
+
     const err = error instanceof Error ? error : new Error(String(error))
 
     // Record this error as a breadcrumb
@@ -505,7 +510,12 @@ export class Logger {
 
     const report: ErrorReport = {
       error_message: err.message,
-      stack_trace: err.stack || "",
+      stack_trace:
+        err.stack ||
+        syntheticStack
+          .split("\n")
+          .filter((line) => !line.includes("@deeptracer/"))
+          .join("\n"),
       severity: context?.severity || "medium",
       context: Object.keys(enrichedContext).length > 0 ? enrichedContext : undefined,
       trace_id: this.requestMeta?.trace_id,
