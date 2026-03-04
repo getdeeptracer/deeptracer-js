@@ -7,7 +7,7 @@
 <h1 align="center">DeepTracer JavaScript SDK</h1>
 
 <p align="center">
-  AI-first observability for vibe coders — logs, errors, traces, and LLM usage tracking.
+  AI-first monitoring for developers — logs, errors, traces, and LLM usage tracking.
   <br />
   <a href="https://deeptracer.dev"><strong>deeptracer.dev</strong></a> · <a href="https://deeptracer.dev/docs">Docs</a> · <a href="https://github.com/getdeeptracer/deeptracer-js/issues">Issues</a>
 </p>
@@ -26,7 +26,7 @@
 
 ---
 
-Built for **vibe coders and AI-assisted development** — sensible defaults, automatic error capture, and one-liner integrations.
+Built for **developers who ship fast with AI** — sensible defaults, automatic error capture, and one-liner integrations.
 
 ## Packages
 

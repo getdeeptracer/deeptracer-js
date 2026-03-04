@@ -65,6 +65,24 @@ export interface DeepTracerSourceMapConfig {
    * Default: `DEEPTRACER_KEY` or `NEXT_PUBLIC_DEEPTRACER_KEY` env var
    */
   apiKey?: string
+  /**
+   * Path patterns to exclude from source map upload.
+   * Any `.map` file whose path contains one of these strings is skipped.
+   * Patterns are matched against the path relative to `distDir`.
+   *
+   * Default: `["node_modules"]` — always excludes third-party source maps.
+   *
+   * To add exclusions on top of the default, spread it:
+   * ```ts
+   * ignore: ["node_modules", "vendor", "polyfills"]
+   * ```
+   *
+   * To disable all exclusions (upload everything):
+   * ```ts
+   * ignore: []
+   * ```
+   */
+  ignore?: string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -115,12 +133,25 @@ export function resolveUploadApiKey(dtConfig?: DeepTracerSourceMapConfig): strin
 // Filesystem scan — finds all .map files in distDir after the build
 // ---------------------------------------------------------------------------
 
+export const DEFAULT_IGNORE = ["node_modules"]
+
 /**
- * Recursively find all *.map files under `dir`.
+ * Returns true if a relative path should be excluded from upload.
+ * Each pattern in `ignorePatterns` is tested as a substring of the path.
+ * Patterns are normalised to forward slashes for cross-platform consistency.
+ */
+export function isIgnored(relativePath: string, ignorePatterns: string[]): boolean {
+  const normalised = relativePath.replace(/\\/g, "/")
+  return ignorePatterns.some((pattern) => normalised.includes(pattern))
+}
+
+/**
+ * Recursively find all *.map files under `dir`, excluding paths that match
+ * any of the `ignorePatterns` substrings (default: `["node_modules"]`).
  * Uses Node.js 20+ `readdir({ recursive: true })`.
  * Returns absolute paths, sorted for deterministic ordering.
  */
-async function findMapFiles(dir: string): Promise<string[]> {
+async function findMapFiles(dir: string, ignorePatterns: string[] = DEFAULT_IGNORE): Promise<string[]> {
   const { readdir } = await import("node:fs/promises")
 
   let entries: string[]
@@ -135,7 +166,7 @@ async function findMapFiles(dir: string): Promise<string[]> {
 
   const maps: string[] = []
   for (const entry of entries) {
-    if (typeof entry === "string" && entry.endsWith(".map")) {
+    if (typeof entry === "string" && entry.endsWith(".map") && !isIgnored(entry, ignorePatterns)) {
       maps.push(`${dir}/${entry}`)
     }
   }
@@ -159,11 +190,12 @@ async function uploadSourceMaps(
   endpoint: string,
   apiKey: string,
   deleteAfterUpload: boolean,
+  ignorePatterns: string[],
 ): Promise<void> {
   const { readFile, unlink } = await import("node:fs/promises")
   const path = await import("node:path")
 
-  const files = await findMapFiles(distDir)
+  const files = await findMapFiles(distDir, ignorePatterns)
 
   if (files.length === 0) {
     console.log("[@deeptracer/nextjs] No source map files found to upload.")
@@ -285,12 +317,13 @@ function mergeCompiler(
   endpoint: string,
   apiKey: string,
   deleteAfterUpload: boolean,
+  ignorePatterns: string[],
 ): NonNullable<NextConfig["compiler"]> {
   const existingHook = existingCompiler?.runAfterProductionCompile as RunAfterFn | undefined
 
   const ourHook: RunAfterFn = async ({ distDir }) => {
     try {
-      await uploadSourceMaps(distDir, release, endpoint, apiKey, deleteAfterUpload)
+      await uploadSourceMaps(distDir, release, endpoint, apiKey, deleteAfterUpload, ignorePatterns)
     } catch (err) {
       console.warn(
         "[@deeptracer/nextjs] Source map upload failed:",
@@ -421,7 +454,8 @@ export function withDeepTracer(
 
   // Schedule post-build source map upload via runAfterProductionCompile
   const deleteAfterUpload = dtConfig?.deleteSourceMapsAfterUpload ?? false
-  result.compiler = mergeCompiler(config.compiler, release, endpoint, apiKey, deleteAfterUpload)
+  const ignorePatterns = dtConfig?.ignore ?? DEFAULT_IGNORE
+  result.compiler = mergeCompiler(config.compiler, release, endpoint, apiKey, deleteAfterUpload, ignorePatterns)
 
   return result
 }

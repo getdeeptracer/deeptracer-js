@@ -339,7 +339,10 @@ No `"use client"`, no `"server-only"` — safe to import from anywhere. Exports:
 
 ### 1. Next.js config
 
-Wrap your config with `withDeepTracer()` to prevent OpenTelemetry packages from being bundled into client-side chunks:
+Wrap your config with `withDeepTracer()`. This does two things:
+
+1. **Prevents OpenTelemetry packages from being bundled into client-side or edge chunks** (required for `autoTracing`)
+2. **Uploads source maps to DeepTracer after `next build`** so stack traces show your original code instead of compiled output
 
 ```ts
 // next.config.ts
@@ -354,6 +357,29 @@ Works with both Webpack and Turbopack. If you use other config wrappers (e.g., S
 
 ```ts
 export default withDeepTracer(withSentryConfig({ reactStrictMode: true }))
+```
+
+**Source map upload** runs automatically in CI environments (Vercel, GitHub Actions, etc.) when `DEEPTRACER_KEY` and `DEEPTRACER_ENDPOINT` are set as build-time environment variables. The release is auto-detected from `VERCEL_GIT_COMMIT_SHA` or `GIT_COMMIT_SHA`.
+
+By default, `node_modules` source maps are excluded — only your app code is uploaded. You can customise this:
+
+```ts
+export default withDeepTracer(nextConfig, {
+  // add patterns on top of the default
+  ignore: ["node_modules", "vendor"],
+
+  // upload everything — disable all filtering
+  // ignore: [],
+
+  // delete .map files from build output after upload (defence-in-depth)
+  // deleteSourceMapsAfterUpload: true,
+})
+```
+
+To disable source map upload entirely:
+
+```ts
+export default withDeepTracer(nextConfig, { uploadSourceMaps: false })
 ```
 
 ### 2. Environment variables

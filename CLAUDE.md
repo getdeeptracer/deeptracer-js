@@ -99,7 +99,7 @@ npm run release      # build all + changeset publish
 
 ## Target Audience
 
-This SDK is designed for **vibe coders** (beginners) whose codebases are modified by **AI agents** (Cursor, Claude Code, Copilot). Prioritize:
+This SDK is designed for **developers who ship fast with AI** — whose codebases are modified by **AI agents** (Cursor, Claude Code, Copilot). Prioritize:
 - Minimal setup (1 file, 5 lines for Next.js)
 - Zero decisions — one clear path, no "choose between A or B"
 - Comprehensive JSDoc — AI agents read type definitions

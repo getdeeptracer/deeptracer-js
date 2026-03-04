@@ -5,6 +5,8 @@ import {
   resolveUploadRelease,
   resolveUploadEndpoint,
   resolveUploadApiKey,
+  isIgnored,
+  DEFAULT_IGNORE,
 } from "../config"
 
 // ---------------------------------------------------------------------------
@@ -182,6 +184,45 @@ describe("resolveUploadApiKey", () => {
 
   it("returns undefined when nothing is set", () => {
     expect(resolveUploadApiKey()).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// isIgnored — source map path filtering
+// ---------------------------------------------------------------------------
+
+describe("isIgnored", () => {
+  it("returns false for an app chunk", () => {
+    expect(isIgnored("static/chunks/app-abc123.js.map", DEFAULT_IGNORE)).toBe(false)
+  })
+
+  it("returns false for a server chunk", () => {
+    expect(isIgnored("server/chunks/route-handler.js.map", DEFAULT_IGNORE)).toBe(false)
+  })
+
+  it("returns true for a node_modules path", () => {
+    expect(isIgnored("node_modules/@clickhouse/client/dist/client.js.map", DEFAULT_IGNORE)).toBe(true)
+  })
+
+  it("returns true for a nested node_modules path (Turbopack copy)", () => {
+    expect(isIgnored("node_modules/@clickhouse/client-19b0b488f23b40db/dist/index.js.map", DEFAULT_IGNORE)).toBe(true)
+  })
+
+  it("normalises Windows backslashes before matching", () => {
+    expect(isIgnored("node_modules\\some-pkg\\dist\\index.js.map", DEFAULT_IGNORE)).toBe(true)
+  })
+
+  it("returns false with empty ignore list", () => {
+    expect(isIgnored("node_modules/@clickhouse/client/dist/client.js.map", [])).toBe(false)
+  })
+
+  it("respects custom ignore patterns", () => {
+    expect(isIgnored("vendor/polyfills.js.map", ["vendor"])).toBe(true)
+    expect(isIgnored("static/chunks/app.js.map", ["vendor"])).toBe(false)
+  })
+
+  it("DEFAULT_IGNORE contains node_modules", () => {
+    expect(DEFAULT_IGNORE).toContain("node_modules")
   })
 })
 
