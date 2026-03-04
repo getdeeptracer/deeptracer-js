@@ -1,5 +1,14 @@
 # @deeptracer/nextjs
 
+## 0.8.2
+
+### Patch Changes
+
+- Updated dependencies [2216366]
+  - @deeptracer/core@0.8.2
+  - @deeptracer/node@0.8.2
+  - @deeptracer/react@0.8.2
+
 ## 0.8.1
 
 ### Patch Changes
