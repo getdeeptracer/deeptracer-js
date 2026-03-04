@@ -189,7 +189,7 @@ async function uploadSourceMaps(
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}` },
       body: formData,
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(10_000),
     })
 
     if (response.ok) {
@@ -209,6 +209,10 @@ async function uploadSourceMaps(
       console.warn(
         `[@deeptracer/nextjs] Source map upload failed (HTTP ${response.status}): ${text}`,
       )
+      // Stop immediately — retrying remaining chunks won't help.
+      // A 4xx means auth/config is wrong; a 5xx means the backend is down.
+      // Either way, all subsequent chunks will fail the same way.
+      break
     }
   }
 
